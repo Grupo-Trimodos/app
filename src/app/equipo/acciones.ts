@@ -4,7 +4,7 @@ import { conPermiso } from "@/lib/usuario";
 import { madridAInstante } from "@/lib/jornada";
 import { apuntarAusenciaEnOutlook } from "@/lib/outlook";
 import { resultadoEnvio, type EnvioFichajes } from "@/lib/envioOdoo";
-import { llamarPython } from "@/lib/python";
+import { enviarFichajesDespues, llamarPython } from "@/lib/python";
 import { volverA } from "@/lib/volver";
 
 /** Vuelve a «Mi equipo» con el mismo centro elegido, y el mensaje. */
@@ -51,7 +51,7 @@ export async function corregirFichaje(form: FormData) {
   if (!nota) return volver("Explica el motivo de la corrección: queda en el registro de jornada.", "error");
   const { error } = await supabase.from("fichajes").insert({ usuario_id, tipo, momento: momento.toISOString(), origen: "correccion", nota });
   if (error) return volver("No se ha podido guardar la corrección.", "error");
-  await llamarPython("/api/rrhh/fichajes/sincronizar", { method: "POST", body: { usuario_id } });
+  enviarFichajesDespues(usuario_id);
   revalidatePath("/equipo");
   return volver("Corrección anotada.");
 }

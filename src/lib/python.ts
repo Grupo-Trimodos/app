@@ -1,4 +1,5 @@
 import "server-only";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -50,4 +51,10 @@ export async function llamarPythonDetalle<T = unknown>(
 export async function llamarPython<T = unknown>(ruta: string, init: { method?: string; body?: unknown } = {}): Promise<T | null> {
   // Si falla, el dato ya está guardado en Supabase: el envío a Odoo se reintenta después.
   return (await llamarPythonDetalle<T>(ruta, init)).datos;
+}
+
+/** Tras fichar: los fichajes pendientes de esa persona van a Odoo DESPUÉS de responder, así quien ficha no espera a Odoo
+ *  (uno o dos segundos más). Si falla, quedan pendientes y se reintentan («Reintentar envío» o la sincronización diaria). */
+export function enviarFichajesDespues(usuario_id?: string) {
+  after(() => llamarPython("/api/rrhh/fichajes/sincronizar", { method: "POST", body: usuario_id ? { usuario_id } : {} }));
 }

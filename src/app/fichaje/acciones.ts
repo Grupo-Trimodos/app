@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { conPermiso } from "@/lib/usuario";
 import { estadoDe, inicioDia, SIGUIENTES, type Fichaje } from "@/lib/jornada";
 import { resultadoEnvio, type EnvioFichajes } from "@/lib/envioOdoo";
-import { llamarPython } from "@/lib/python";
+import { enviarFichajesDespues, llamarPython } from "@/lib/python";
 
 /** Se ficha desde el inicio o desde «Fichaje»: se vuelve a la misma pantalla (solo esas dos). */
 const pantalla = (form: FormData) => (form.get("volver") === "/" ? "/" : "/fichaje");
@@ -25,7 +25,7 @@ export async function fichar(form: FormData) {
   // La base de datos rechaza un fichaje fuera de orden (p. ej. dos entradas seguidas desde dos móviles).
   if (error) return volver(a, error.code === "23514" ? "Ese fichaje no corresponde ahora. Recarga la página."
     : "No se ha podido fichar. Inténtalo de nuevo.", "error");
-  await llamarPython("/api/rrhh/fichajes/sincronizar", { method: "POST", body: {} });
+  enviarFichajesDespues();
   revalidatePath("/");
   revalidatePath("/fichaje");
   volver(a, { entrada: "Entrada fichada.", pausa: "Pausa anotada.", reanudar: "Vuelta anotada.", salida: "Salida fichada. ¡Hasta mañana!" }[tipo]);

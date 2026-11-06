@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { conPermiso } from "@/lib/usuario";
 import { estadoDe, inicioDia, type Fichaje } from "@/lib/jornada";
-import { llamarPython } from "@/lib/python";
+import { enviarFichajesDespues } from "@/lib/python";
 
 const volver = (msg: string, tipo: "ok" | "error" = "ok") => redirect(`/chofer?${tipo}=${encodeURIComponent(msg)}`);
 
@@ -36,7 +36,7 @@ export async function empezarConCamion(form: FormData) {
   if (estado !== "fuera") return volver("Camión confirmado.");
   const { error: e } = await supabase.from("fichajes").insert({ tipo: "entrada", origen: "camion" });
   if (e) return volver("Camión confirmado, pero no se ha podido fichar la entrada: fíchala en «Fichaje».", "error");
-  await llamarPython("/api/rrhh/fichajes/sincronizar", { method: "POST", body: {} });
+  enviarFichajesDespues();
   volver("Camión confirmado y entrada fichada. ¡Buen viaje!");
 }
 
@@ -48,7 +48,7 @@ export async function finalizarJornada() {
   if (estado !== "fuera") {
     const { error } = await supabase.from("fichajes").insert({ tipo: "salida", origen: "camion" });
     if (error) return volver("Camión cerrado, pero no se ha podido fichar la salida. Fíchala en «Fichaje».", "error");
-    await llamarPython("/api/rrhh/fichajes/sincronizar", { method: "POST", body: {} });
+    enviarFichajesDespues();
   }
   revalidatePath("/chofer");
   volver("Jornada terminada. ¡Buen descanso!");
