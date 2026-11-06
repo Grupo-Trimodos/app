@@ -1,5 +1,11 @@
 /* Navegación común: la misma estructura en oficina y en cabina. */
 .app-shell { --shell-ancho: 232px; }
+/* Barra de carga (BarraCarga.tsx): sale al pulsar, avanza mientras el servidor prepara la página y se desvanece al llegar. */
+.barra-carga { position: fixed; inset: 0 0 auto 0; z-index: 200; height: 3px; background: #fcda00; box-shadow: 0 1px 4px #fcda0099; transform: scaleX(0); transform-origin: left; opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+.barra-carga.cargando { opacity: 1; transition: none; animation: barra-carga 10s cubic-bezier(.05, .75, .2, 1) forwards; }
+.barra-carga.fin { transform: scaleX(1); }
+@keyframes barra-carga { from { transform: scaleX(0); } to { transform: scaleX(.92); } }
+form.enviando button { pointer-events: none; opacity: .65; }
 .shell-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 35; width: 232px; background: #142535; color: #d8e0e8; display: flex; flex-direction: column; padding: 27px 16px 22px; }
 .shell-logo { display: flex; align-items: center; justify-content: center; background: white; min-height: 63px; border-radius: 7px; padding: 12px 15px; margin: 0 4px 36px; }
 .shell-logo img { display: block; width: 100%; height: auto; max-height: 44px; object-fit: contain; }

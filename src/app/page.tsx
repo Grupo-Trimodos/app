@@ -96,10 +96,16 @@ export default async function Inicio({ searchParams }: { searchParams: Promise<{
   const nombre = perfil?.nombre || perfil?.email || perfil?.codigo || "";
   const mias = AREAS.filter((a) => enMenu(a.id)).sort((a, b) => orden.indexOf(a.id) - orden.indexOf(b.id));
   const herramientas = <nav className="inicio-modulos" aria-label="Herramientas disponibles">
-    {mias.map((a) => <a key={a.id} className={`inicio-modulo ${a.id === "flota" ? "inicio-modulo-flota" : ""}`} href={a.ruta}>
-      <div className="inicio-modulo-top"><span className="inicio-icono"><Icono nombre={ICONOS_AREA[a.id] ?? "documento"} size={25} /></span><span>{detalles[a.id]?.etiqueta ?? "HERRAMIENTA"}</span><Icono nombre="flecha" size={19} /></div>
-      <h3>{detalles[a.id]?.titulo ?? a.nombre}</h3><p>{detalles[a.id]?.descripcion ?? a.descripcion}</p>
-    </a>)}
+    {mias.map((a) => {
+      const dentro = <>
+        <div className="inicio-modulo-top"><span className="inicio-icono"><Icono nombre={ICONOS_AREA[a.id] ?? "documento"} size={25} /></span><span>{detalles[a.id]?.etiqueta ?? "HERRAMIENTA"}</span><Icono nombre="flecha" size={19} /></div>
+        <h3>{detalles[a.id]?.titulo ?? a.nombre}</h3><p>{detalles[a.id]?.descripcion ?? a.descripcion}</p>
+      </>;
+      const clase = `inicio-modulo ${a.id === "flota" ? "inicio-modulo-flota" : ""}`;
+      // DECA es una PWA independiente y necesita una navegación completa; el resto, sin recargar la página entera.
+      return a.id === "deca" ? <a key={a.id} className={clase} href={a.ruta}>{dentro}</a>
+        : <Link key={a.id} className={clase} href={a.ruta}>{dentro}</Link>;
+    })}
   </nav>;
 
   // Cada perfil entra en su pantalla. Dirección: el cuadro de mando de toda la empresa (sin fichar ni flota).
