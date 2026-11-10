@@ -13,6 +13,22 @@ Se lanzan desde la carpeta del proyecto con el entorno de Python: `.venv/bin/pyt
 | `diagnostico_movildata` | La forma de cada respuesta de Movildata (tipo, cuántos y nombres de campos) y si la app la sabe leer. No enseña datos ni la clave. | Si Movildata cambia su formato o la flota sale vacía. |
 | `comprobar_compatibilidad` | Comprueba, solo leyendo, si la app funcionaría con otra versión de Odoo (p. ej. la 18). Usa `ENV_FILE` para apuntar al entorno a probar. | Antes de actualizar Odoo. |
 
+`comprobar_compatibilidad` revisa también los campos habituales que usa el envío de fichajes y ausencias en
+`hr.employee`, `hr.attendance`, `hr.leave` y `hr.leave.type`. Consulta su definición (`fields_get`), sin leer fichas
+personales ni crear registros de RRHH. Si falta un campo o no se puede consultar un modelo, lo indica como fallo y
+continúa con los demás. No comprueba el campo de correo adicional de `ODOO_CAMPO_CORREO`, si está configurado.
+Esto no demuestra que Odoo acepte una entrada o una ausencia: todavía hay que probar el envío en el Odoo de pruebas,
+con el empleado, saldo y permisos adecuados.
+
+Para ejecutarlo en Mac con el archivo del entorno de pruebas preparado:
+
+```bash
+ENV_FILE=.env.pruebas .venv/bin/python -X utf8 -m scripts.comprobar_compatibilidad
+```
+
+Ese archivo debe configurar `ODOO_MODE=real` y las credenciales del Odoo de pruebas. No cambies el entorno de
+producción. Sin `ENV_FILE`, la configuración intenta cargar `.env` y `.env.local`.
+
 ## Generadores (solo se usan al cambiar diseño o textos de DECA)
 
 | Script | Qué genera |

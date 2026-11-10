@@ -1,4 +1,4 @@
-"""Comprobación de COMPATIBILIDAD con una versión de Odoo (p. ej. la 18). SOLO LECTURA: no escribe ni imprime nada.
+r"""Comprobación de COMPATIBILIDAD con una versión de Odoo (p. ej. la 18). SOLO LECTURA: no escribe ni genera informes PDF.
 
 Uso (con ENV_FILE apuntando al entorno a probar):
     $env:ENV_FILE=".env.odoo18"; .\.venv\Scripts\python.exe -X utf8 -m scripts.comprobar_compatibilidad
@@ -7,10 +7,19 @@ import sys
 
 from servicios.config import get_settings
 from servicios.odoo_client import (ATTACHMENT_FIELDS, ATTACHMENT_MODEL, EDITABLE_FIELDS, GOODS_MODEL, PACKAGE_FIELDS, PACKAGE_MODEL,
-                             REPORT_NAME, TASK_FIELDS, TASK_MODEL, OdooClient)
+                             REPORT_NAME, TASK_FIELDS, TASK_MODEL, ATTENDANCE_MODEL, EMPLOYEE_MODEL,
+                             LEAVE_MODEL, LEAVE_TYPE_MODEL, OdooClient)
 
 
 OPCIONALES: set[str] = set()   # campos que pueden faltar sin que la app deje de funcionar (ahora ninguno)
+
+# Campos leídos, filtrados o enviados por el cliente de RRHH; aquí solo se consulta su existencia.
+CAMPOS_RRHH = {
+    EMPLOYEE_MODEL: ["id", "name", "work_email", "barcode"],
+    ATTENDANCE_MODEL: ["id", "employee_id", "check_in", "check_out"],
+    LEAVE_MODEL: ["id", "employee_id", "holiday_status_id", "request_date_from", "request_date_to", "name", "state"],
+    LEAVE_TYPE_MODEL: ["id", "name"],
+}
 
 
 def main():
@@ -46,6 +55,18 @@ def main():
         check(not graves, f"{model}: {len(wanted) - len(missing)}/{len(wanted)} campos"
               + (f"  FALTAN: {graves}" if graves else "") + (f"  (ausentes pero con alternativa: {opcionales})" if opcionales else ""))
     check(EDITABLE_FIELDS <= set(o.describe_fields(PACKAGE_MODEL, [""])), f"{PACKAGE_MODEL}: existen los 4 campos editables")
+
+    print("\nCampos de empleados, fichajes y ausencias (solo metadatos):")
+    for model, wanted in CAMPOS_RRHH.items():
+        try:
+            have = o._call(model, "fields_get", [wanted], {"attributes": ["type"]})
+        except Exception as e:  # noqa: BLE001
+            check(False, f"{model}: no se puede leer ({e})")
+            continue
+        missing = [f for f in wanted if f not in have]
+        check(not missing, f"{model}: {len(wanted) - len(missing)}/{len(wanted)} campos"
+              + (f"  FALTAN: {missing}" if missing else ""))
+
     try:
         o.search_goods("a", 1)
         check(True, f"{GOODS_MODEL}: name_search funciona")
