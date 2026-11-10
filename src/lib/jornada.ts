@@ -5,7 +5,7 @@ export type Fichaje = {
   id: number; usuario_id: string; tipo: "entrada" | "pausa" | "reanudar" | "salida"; momento: string;
   origen: "app" | "camion" | "correccion"; nota: string | null; odoo_estado: string; odoo_error: string | null;
 };
-export type Estado = "fuera" | "trabajando" | "pausa";
+export type Estado = "fuera" | "trabajando" | "pausa" | "pendiente";
 
 /** Medianoche (hora de Madrid) de hoy o de hace `dias` días, como instante. Respeta los cambios de hora. */
 export function inicioDia(dias = 0): Date {
@@ -26,51 +26,82 @@ export const fecha = (iso: string | Date) =>
   new Date(iso).toLocaleDateString("es-ES", { timeZone: ZONA, weekday: "short", day: "numeric", month: "short" });
 export const hoyISO = () => new Date().toLocaleDateString("sv-SE", { timeZone: ZONA });   // AAAA-MM-DD
 
-export function estadoDe(fichajes: Fichaje[]): Estado {
-  const ultimo = [...fichajes].sort((a, b) => a.momento.localeCompare(b.momento)).at(-1);
-  if (!ultimo || ultimo.tipo === "salida") return "fuera";
-  return ultimo.tipo === "pausa" ? "pausa" : "trabajando";
-}
-
-/** Minutos trabajados: de cada entrada/reanudar a la siguiente pausa/salida (o hasta ahora). */
-export function minutosTrabajados(fichajes: Fichaje[], ahora = new Date()): number {
-  let total = 0;
-  let desde: number | null = null;
-  for (const f of [...fichajes].sort((a, b) => a.momento.localeCompare(b.momento))) {
-    const t = new Date(f.momento).getTime();
-    if (f.tipo === "entrada" || f.tipo === "reanudar") desde ??= t;
-    else if (desde !== null) { total += t - desde; desde = null; }
-  }
-  if (desde !== null) total += ahora.getTime() - desde;
-  return Math.max(0, Math.round(total / 60000));
-}
-
-/** Minutos trabajados en varios días, cada día por separado: una salida olvidada no alarga el total al día siguiente. */
-export function minutosPorDia(fichajes: Fichaje[], ahora = new Date()): number {
-  const dias = new Map<string, Fichaje[]>();
-  for (const f of fichajes) {
-    const d = new Date(f.momento).toLocaleDateString("sv-SE", { timeZone: ZONA });
-    dias.set(d, [...(dias.get(d) ?? []), f]);
-  }
-  let total = 0;
-  for (const [d, fs] of dias) {
-    const ultimo = fs.reduce((a, f) => (f.momento.localeCompare(a) > 0 ? f.momento : a), fs[0].momento);
-    total += minutosTrabajados(fs, d === hoyISO() ? ahora : new Date(ultimo));
-  }
-  return total;
-}
-
+/** Umbral operativo aprobado: tiempo transcurrido, incluidas las pausas. No es una salida. */
+export const LIMITE_JORNADA_HORAS = 16;
+export type Jornada = {
+  entrada: Fichaje; salida: Fichaje | null; fichajes: Fichaje[]; dia: string;
+  minutos: number; pendiente: boolean; incidencias: string[];
+};
+const diaMadrid = (instante: string | Date) => new Date(instante).toLocaleDateString("sv-SE", { timeZone: ZONA });
 export const duracion = (min: number) => `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, "0")} min`;
 
-/** Fichajes de la jornada en curso (desde la última entrada), aunque empezara ayer (turno de noche). */
-export function jornadaEnCurso(fichajes: Fichaje[]): Fichaje[] {
-  const orden = [...fichajes].sort((a, b) => a.momento.localeCompare(b.momento));
-  const i = orden.map((f) => f.tipo).lastIndexOf("entrada");
-  return i < 0 ? [] : orden.slice(i);
+/** Único cálculo de jornadas. Recibe secuencias completas por persona, nunca recortadas por medianoche.
+ * Las horas cerradas se imputan al día de entrada; las abiertas son provisionales y se congelan a las 16 h.
+ * Las anomalías se muestran para revisión: una entrada duplicada nunca reinicia el contador.
+ */
+export function calcularJornada(fichajes: Fichaje[], ahora = new Date()) {
+  const orden = [...fichajes].sort((a, b) => Date.parse(a.momento) - Date.parse(b.momento) || a.id - b.id);
+  const jornadas: Jornada[] = [];
+  const incidencias: string[] = [];
+  let actual: Jornada | null = null;
+  let tramo: number | null = null;
+  let milisegundos = 0;
+  let estado: Estado = "fuera";
+  const limite = () => Date.parse(actual!.entrada.momento) + LIMITE_JORNADA_HORAS * 3600000;
+  // Los tramos completos se guardan para poder recortarlos al umbral SOLO mientras falta la salida.
+  let tramos: [number, number][] = [];
+  const advertir = (texto: string) => { incidencias.push(texto); actual?.incidencias.push(texto); };
+  for (const f of orden) {
+    const t = Date.parse(f.momento);
+    if (!Number.isFinite(t) || t > ahora.getTime()) { advertir("Hay un fichaje con fecha no válida o futura. Revisa el registro."); continue; }
+    if (f.tipo === "entrada") {
+      if (actual) { actual.fichajes.push(f); advertir("Hay otra entrada antes de cerrar la jornada. Revisa los fichajes."); continue; }
+      actual = { entrada: f, salida: null, fichajes: [f], dia: diaMadrid(f.momento), minutos: 0, pendiente: false, incidencias: [] };
+      jornadas.push(actual); tramo = t; milisegundos = 0; tramos = []; estado = "trabajando";
+      continue;
+    }
+    if (!actual) { advertir("Hay un fichaje sin entrada anterior. Avisa al responsable para revisarlo."); continue; }
+    actual.fichajes.push(f);
+    if (f.tipo === "reanudar") {
+      if (tramo !== null) advertir("Hay una vuelta de pausa sin pausa anterior.");
+      else tramo = t;
+      estado = "trabajando";
+    } else {
+      if (tramo !== null) { milisegundos += t - tramo; tramos.push([tramo, t]); tramo = null; }
+      else if (f.tipo === "pausa") advertir("Hay una pausa repetida. Revisa los fichajes.");
+      if (f.tipo === "salida") {
+        actual.salida = f; actual.minutos = Math.round(milisegundos / 60000);
+        actual = null; estado = "fuera";
+      } else estado = "pausa";
+    }
+  }
+  if (actual) {
+    const hasta = Math.min(ahora.getTime(), limite());
+    const completos = tramos.reduce((s, [a, b]) => s + Math.max(0, Math.min(b, hasta) - a), 0);
+    actual.minutos = Math.round((completos + (tramo === null ? 0 : Math.max(0, hasta - tramo))) / 60000);
+    actual.pendiente = ahora.getTime() >= limite();
+    if (actual.pendiente) estado = "pendiente";
+  }
+  const hoy = diaMadrid(ahora);
+  const lunes = new Date(`${hoy}T12:00:00Z`);
+  lunes.setUTCDate(lunes.getUTCDate() - (lunes.getUTCDay() + 6) % 7);
+  const semana = lunes.toISOString().slice(0, 10);
+  const cerradas = jornadas.filter((j) => j.salida !== null && j.incidencias.length === 0);
+  const sumar = (js: Jornada[]) => js.reduce((s, j) => s + j.minutos, 0);
+  return { jornadas, actual, estado, incidencias, minutosCerrados: sumar(cerradas),
+    minutosHoy: sumar(cerradas.filter((j) => j.dia === hoy)),
+    minutosSemana: sumar(cerradas.filter((j) => j.dia >= semana && j.dia <= hoy)),
+    minutosVisibles: actual?.minutos ?? sumar(cerradas.filter((j) => j.dia === hoy)),
+  };
+}
+
+export function avisoJornada(jornada: Jornada): string {
+  return `Tienes una jornada pendiente de cierre desde el ${fecha(jornada.entrada.momento)} a las ${hora(jornada.entrada.momento)}. Avisa a tu responsable para poder iniciar otra.`;
 }
 
 /** Qué fichajes se pueden hacer desde cada estado. */
 export const SIGUIENTES: Record<Estado, Fichaje["tipo"][]> = {
+  pendiente: [],
   fuera: ["entrada"],
   trabajando: ["pausa", "salida"],
   pausa: ["reanudar", "salida"],
@@ -81,7 +112,7 @@ export const NOMBRE_TIPO: Record<Fichaje["tipo"], string> = {
 export const BOTON_TIPO: Record<Fichaje["tipo"], string> = {
   entrada: "Fichar entrada", pausa: "Empezar pausa", reanudar: "Volver de la pausa", salida: "Fichar salida",
 };
-export const NOMBRE_ESTADO: Record<Estado, string> = { fuera: "Sin fichar", trabajando: "Trabajando", pausa: "En pausa" };
+export const NOMBRE_ESTADO: Record<Estado, string> = { pendiente: "Pendiente de cierre", fuera: "Sin fichar", trabajando: "Trabajando", pausa: "En pausa" };
 
 export const ESTADO_ODOO: Record<string, string> = {
   pendiente: "Pendiente de enviar a Odoo", enviado: "En Odoo", simulado: "Modo prueba (no se envía a Odoo)",

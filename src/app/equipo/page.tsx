@@ -1,3 +1,4 @@
+import { leerFichajesJornada, leerPendientesCierre } from "@/lib/jornadas-servidor";
 import Link from "next/link";
 import SinEnvioConIntro from "../SinEnvioConIntro";
 import Cabecera from "../Cabecera";
@@ -5,10 +6,9 @@ import EstadoOdoo from "../EstadoOdoo";
 import { alcanceCentros, conPermiso } from "@/lib/usuario";
 import { permisosDe } from "@/lib/permisos";
 import {
-  duracion, estadoDe, fecha, hora, hoyISO, inicioDia, jornadaEnCurso, minutosTrabajados, NOMBRE_AUSENCIA, NOMBRE_ESTADO, NOMBRE_TIPO,
-  type Fichaje,
+  duracion, calcularJornada, fecha, hora, hoyISO, NOMBRE_AUSENCIA, NOMBRE_ESTADO, NOMBRE_TIPO,
 } from "@/lib/jornada";
-import { corregirFichaje, reintentarOdoo, resolverAusencia } from "./acciones";
+import { cerrarJornada, corregirFichaje, reintentarOdoo, resolverAusencia } from "./acciones";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mi equipo · Grupo Trimodos" };
@@ -52,9 +52,8 @@ export default async function PaginaEquipo({ searchParams }: { searchParams: Pro
   const ids = miembros.map((x) => x.usuario_id);
   const hoy = hoyISO();
 
-  const [{ data: f }, { data: aus }, { data: asig }, { data: porResolver }, { data: sinEnviar }] = await Promise.all([
-    supabase.from("fichajes").select("id,usuario_id,tipo,momento,origen,nota,odoo_estado,odoo_error")
-      .in("usuario_id", ids.length ? ids : [NADIE]).gte("momento", inicioDia(1).toISOString()).order("momento"),
+  const [registro, { data: aus }, { data: asig }, { data: porResolver }, { data: sinEnviar }, cierres] = await Promise.all([
+    leerFichajesJornada(supabase),
     supabase.from("ausencias").select("id,usuario_id,tipo,desde,hasta,motivo,estado,odoo_estado,odoo_error")
       .in("usuario_id", ids.length ? ids : [NADIE]).or(`estado.eq.pendiente,and(estado.eq.aprobada,hasta.gte.${hoy})`).order("desde"),
     supabase.from("asignaciones").select("usuario_id,inicio,vehiculos(matricula)")
@@ -65,13 +64,14 @@ export default async function PaginaEquipo({ searchParams }: { searchParams: Pro
     // Fichajes que no han llegado a Odoo, sean del día que sean (los siguientes esperan detrás de un error).
     supabase.from("fichajes").select("usuario_id,odoo_estado,odoo_error").in("usuario_id", ids.length ? ids : [NADIE])
       .in("odoo_estado", ["error", "sin_empleado"]).order("momento", { ascending: false }),
+    corregir ? leerPendientesCierre(supabase) : null,
   ]);
   const problemaOdoo = new Map<string, { odoo_estado: string; odoo_error: string | null }>();
   for (const x of (sinEnviar ?? []) as { usuario_id: string; odoo_estado: string; odoo_error: string | null }[]) {
     if (!problemaOdoo.has(x.usuario_id)) problemaOdoo.set(x.usuario_id, x);
   }
   const pendientes = (porResolver ?? []) as Ausencia[];
-  const idsPendientes = [...new Set(pendientes.map((a) => a.usuario_id))];
+  const idsPendientes = [...new Set([...pendientes.map((a) => a.usuario_id), ...(cierres?.jornadas ?? []).map((j) => j.entrada.usuario_id)])];
   const [{ data: quienes }, { data: susCentros }] = idsPendientes.length ? await Promise.all([
     supabase.from("usuarios").select("id,nombre,codigo").in("id", idsPendientes),
     supabase.from("usuario_perfil").select("usuario_id,centros(nombre)").in("usuario_id", idsPendientes),
@@ -82,24 +82,20 @@ export default async function PaginaEquipo({ searchParams }: { searchParams: Pro
   for (const x of (susCentros ?? []) as unknown as { usuario_id: string; centros: { nombre: string } | null }[]) {
     centroDe.set(x.usuario_id, [centroDe.get(x.usuario_id), x.centros?.nombre ?? "Sin centro"].filter(Boolean).join(" · "));
   }
-  const fichajes = (f ?? []) as Fichaje[];
+  const fichajes = registro.data;
   const ausencias = (aus ?? []) as Ausencia[];
   const camiones = new Map(((asig ?? []) as unknown as { usuario_id: string; inicio: string; vehiculos: { matricula: string } }[])
     .map((a) => [a.usuario_id, a]));
   const nombre = new Map(miembros.map((x) => [x.usuario_id, x.usuarios.nombre || x.usuarios.codigo || "—"]));
-  const desdeHoy = inicioDia().getTime();
 
   const filas = miembros.map((x) => {
-    const suyos = fichajes.filter((y) => y.usuario_id === x.usuario_id);
-    const hoyF = suyos.filter((y) => new Date(y.momento).getTime() >= desdeHoy);
+    const resumen = calcularJornada(fichajes.filter((y) => y.usuario_id === x.usuario_id));
     const ausenteHoy = ausencias.find((a) => a.usuario_id === x.usuario_id && a.estado === "aprobada" && a.desde <= hoy && a.hasta >= hoy);
-    const estado = estadoDe(suyos);
-    const jornada = estado === "fuera" ? hoyF : jornadaEnCurso(suyos);
-    return { x, estado, entrada: jornada.find((y) => y.tipo === "entrada"), min: minutosTrabajados(jornada),
+    return { x, estado: resumen.estado, entrada: resumen.actual?.entrada, min: resumen.minutosVisibles,
       odoo: problemaOdoo.get(x.usuario_id), ausenteHoy, camion: camiones.get(x.usuario_id) };
   });
-  const cuenta = { trabajando: 0, pausa: 0, fuera: 0, ausente: 0 };
-  for (const r of filas) r.ausenteHoy ? cuenta.ausente++ : cuenta[r.estado]++;
+  const cuenta = { trabajando: 0, pausa: 0, fuera: 0, ausente: 0, pendiente: 0 };
+  for (const r of filas) r.estado === "pendiente" ? cuenta.pendiente++ : r.ausenteHoy ? cuenta.ausente++ : cuenta[r.estado]++;
 
   return (
     <>
@@ -116,6 +112,29 @@ export default async function PaginaEquipo({ searchParams }: { searchParams: Pro
         )}
         {ok && <p className="aviso" role="status">{ok}</p>}
         {error && <p className="error" role="alert">{error}</p>}
+
+        {corregir && <section className="panel" id="cierres">
+          <h2>Jornadas pendientes de cierre ({cierres?.error ? "—" : cierres?.jornadas.length ?? 0})</h2>
+          <p className="hint">De todos los centros donde puedes corregir fichajes. Las horas son provisionales y se detienen a las 16 horas desde la entrada.</p>
+          {cierres?.error && <p className="error" role="alert">No se han podido consultar las jornadas pendientes. Recarga la página.</p>}
+          {cierres?.jornadas.map((j) => <details key={j.entrada.id} className="panel">
+            <summary><b>{nombrePendiente.get(j.entrada.usuario_id) ?? "—"}</b> · {centroDe.get(j.entrada.usuario_id) ?? "Sin centro"}
+              {" · "}{fecha(j.entrada.momento)} {hora(j.entrada.momento)} · Revisar y cerrar</summary>
+            <p>Horas provisionales: <b>{duracion(j.minutos)}</b></p>
+            <ul className="lista-fichajes">{j.fichajes.map((f) => <li key={f.id}>
+              {fecha(f.momento)} {hora(f.momento)} · {NOMBRE_TIPO[f.tipo]}{f.nota ? ` · ${f.nota}` : ""}
+            </li>)}</ul>
+            {j.incidencias.map((texto, i) => <p className="error" key={i}>{texto}</p>)}
+            <form action={cerrarJornada}>
+              <input type="hidden" name="entrada_id" value={j.entrada.id} />
+              <label htmlFor={`salida-${j.entrada.id}`}>Fecha y hora reales de salida (Madrid)</label>
+              <input id={`salida-${j.entrada.id}`} name="momento" type="datetime-local" required />
+              <label htmlFor={`motivo-${j.entrada.id}`}>Motivo de la corrección</label>
+              <input id={`motivo-${j.entrada.id}`} name="nota" required maxLength={300} />
+              <button className="btn primario grande" style={{ marginTop: 14 }}>Guardar salida y cerrar jornada</button>
+            </form>
+          </details>)}
+        </section>}
 
         {aprobar && <section className="panel">
           <h2>Vacaciones y ausencias por aprobar ({pendientes.length})</h2>
@@ -153,21 +172,23 @@ export default async function PaginaEquipo({ searchParams }: { searchParams: Pro
           <div className="panel"><b>{cuenta.trabajando}</b><span>Trabajando</span></div>
           <div className="panel"><b>{cuenta.pausa}</b><span>En pausa</span></div>
           <div className="panel"><b>{cuenta.fuera}</b><span>Sin fichar o han salido</span></div>
+          <div className="panel"><b>{cuenta.pendiente}</b><span>Pendientes de cierre</span></div>
           <div className="panel"><b>{cuenta.ausente}</b><span>De vacaciones o ausentes</span></div>
         </div>
 
         <section className="panel">
-          <h2>Hoy · {elegido.nombre}</h2>
+          <h2>Jornada actual · {elegido.nombre}</h2>
+          {registro.error && <p className="error">No se han podido consultar los fichajes.</p>}
           {filas.length === 0 ? <p className="hint">No hay nadie en este centro. Asigna personas desde Administración.</p> : (
             <table>
-              <thead><tr><th>Persona</th><th>Estado</th><th>Entrada</th><th>Horas hoy</th><th>Camión</th></tr></thead>
+              <thead><tr><th>Persona</th><th>Estado</th><th>Entrada</th><th>Horas cerradas hoy / provisionales</th><th>Camión</th></tr></thead>
               <tbody>
                 {filas.map(({ x, estado, entrada, min, odoo, ausenteHoy, camion }) => (
                   <tr key={x.usuario_id}>
                     <td><b>{nombre.get(x.usuario_id)}</b><br /><span className="hint">{x.perfiles.join(" · ")}</span></td>
                     <td>
                       <span className={`etiqueta ${estado === "trabajando" ? "ok" : ""}`}>
-                        {ausenteHoy ? NOMBRE_AUSENCIA[ausenteHoy.tipo] : NOMBRE_ESTADO[estado]}
+                        {registro.error ? "Sin datos" : estado === "pendiente" ? NOMBRE_ESTADO[estado] : ausenteHoy ? NOMBRE_AUSENCIA[ausenteHoy.tipo] : NOMBRE_ESTADO[estado]}
                       </span>
                       {odoo && <div style={{ marginTop: 6 }}>
                         <EstadoOdoo estado={odoo.odoo_estado} error={odoo.odoo_estado === "sin_empleado"
@@ -179,7 +200,7 @@ export default async function PaginaEquipo({ searchParams }: { searchParams: Pro
                       </div>}
                     </td>
                     <td>{entrada ? hora(entrada.momento) : "—"}</td>
-                    <td>{min ? duracion(min) : "—"}</td>
+                    <td>{registro.error ? "—" : duracion(min)}{estado !== "fuera" && " · Provisional"}</td>
                     <td>{camion ? <>{camion.vehiculos.matricula}<br /><span className="hint">desde {hora(camion.inicio)}</span></> : "—"}</td>
                   </tr>
                 ))}

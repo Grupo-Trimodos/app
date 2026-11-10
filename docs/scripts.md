@@ -41,3 +41,20 @@ producción. Sin `ENV_FILE`, la configuración intenta cargar `.env` y `.env.loc
 > **Desfasados:** `crear_iconos`, `crear_imagen_compartir` y `preparar_logos` todavía escriben en `public/icons` y
 > `public/img`, de cuando DECA estaba en la raíz de `public/`. Los archivos de verdad están en `public/deca/icons` y
 > `public/deca/img`. Antes de volver a usarlos hay que corregir esas rutas (es código de DECA: con permiso).
+
+## Prueba local de jornadas (PostgreSQL en Docker)
+
+`prueba_jornadas_db` crea una base temporal con las migraciones del repositorio y datos ficticios en el contenedor local
+`trimodos-jornada-pruebas`, y elimina únicamente esa base al terminar. No lee archivos de entorno, no conecta con Supabase
+ni Odoo y no envía fichajes. Requiere Docker arrancado y un contenedor PostgreSQL de pruebas:
+
+```bash
+docker run --detach --rm --name trimodos-jornada-pruebas -e POSTGRES_PASSWORD=solo-pruebas-locales postgres:17
+python3 -m scripts.prueba_jornadas_db --contenedor trimodos-jornada-pruebas
+```
+
+Comprueba el bloqueo de entradas después de 1, 2 y 3 días, la lectura de jornadas antiguas, los permisos por centro,
+la fecha y el motivo del cierre, dos cierres simultáneos y la prohibición de editar o borrar fichajes. Se usan las políticas
+RLS del repositorio; la función `auth.uid()` se simula con una identidad de sesión, sin un servidor Supabase Auth.
+Con `--sin-arreglo` omite la migración nueva y reproduce el fallo original (la prueba debe fallar al aceptar otra entrada
+al tercer día). Para terminar el contenedor temporal: `docker stop trimodos-jornada-pruebas`.

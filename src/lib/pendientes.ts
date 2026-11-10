@@ -1,3 +1,4 @@
+import { leerPendientesCierre } from "@/lib/jornadas-servidor";
 import { cache } from "react";
 import { documentosDe } from "@/lib/documentos";
 import { fecha, NOMBRE_AUSENCIA } from "@/lib/jornada";
@@ -24,7 +25,7 @@ export const misPendientes = cache(async function misPendientes() {
   const cabeza = { count: "exact" as const, head: true };
   const temporada = temporadaActual();
   const conRopa = esDeSuPuesto("ropa.pedir");
-  const [aus, ropaP, ropaA, ropaT, gente, inc, cad, odooF, odooA, docs, miDot, misTallas, misAus, miRopa, misInc] = await Promise.all([
+  const [aus, ropaP, ropaA, ropaT, gente, inc, cad, odooF, odooA, docs, miDot, misTallas, misAus, miRopa, misInc, cierres] = await Promise.all([
     puede("ausencias.aprobar") ? supabase.from("ausencias").select("id", cabeza).eq("estado", "pendiente").neq("usuario_id", uid) : null,
     puede("ropa.gestionar") ? supabase.from("solicitudes_ropa").select("id", cabeza).eq("estado", "pendiente").neq("usuario_id", uid) : null,
     puede("ropa.gestionar") ? supabase.from("solicitudes_ropa").select("id", cabeza).eq("estado", "aprobada").neq("usuario_id", uid) : null,
@@ -46,9 +47,12 @@ export const misPendientes = cache(async function misPendientes() {
       .or(`resuelto_en.gte.${hace7},entregado_en.gte.${hace7}`) : null,
     puede("incidencias.reportar") ? supabase.from("incidencias").select("id,tipo,cerrada_en").eq("reportado_por", uid)
       .gte("cerrada_en", hace7) : null,
+    puede("fichaje.corregir") ? leerPendientesCierre(supabase) : null,
   ]);
 
   const tareas: Tarea[] = [];
+  if (cierres) tareas.push({ id: "cierres", titulo: "Jornadas pendientes de cierre", cantidad: cierres.error ? null : cierres.jornadas.length,
+    href: "/equipo#cierres", icono: "reloj", detalle: cierres.error ? "No se ha podido consultar" : "Revisa los fichajes y anota la salida real" });
   if (aus) tareas.push({ id: "ausencias", titulo: "Vacaciones por aprobar", cantidad: cuenta(aus), href: "/equipo", icono: "calendario",
     detalle: "De las personas que tienes a tu cargo" });
   if (ropaP) {

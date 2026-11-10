@@ -1,8 +1,9 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { leerFichajesJornada } from "@/lib/jornadas-servidor";
 import { conPermiso } from "@/lib/usuario";
-import { estadoDe, inicioDia, SIGUIENTES, type Fichaje } from "@/lib/jornada";
+import { calcularJornada, avisoJornada, SIGUIENTES, type Fichaje } from "@/lib/jornada";
 import { resultadoEnvio, type EnvioFichajes } from "@/lib/envioOdoo";
 import { enviarFichajesDespues, llamarPython } from "@/lib/python";
 
@@ -15,15 +16,15 @@ export async function fichar(form: FormData) {
   const { supabase, uid } = await conPermiso("fichaje.fichar");
   const a = pantalla(form);
   const tipo = String(form.get("tipo")) as Fichaje["tipo"];
-  const { data, error: errorLeer } = await supabase.from("fichajes").select("tipo,momento").eq("usuario_id", uid)
-    .gte("momento", inicioDia(1).toISOString()).order("momento");
-  // Sin saber cómo está la jornada no se ficha (se podría anotar una entrada encima de otra).
+  const { data, error: errorLeer } = await leerFichajesJornada(supabase, uid);
   if (errorLeer) return volver(a, "No se ha podido comprobar tu jornada. Inténtalo de nuevo en un momento.", "error");
-  const estado = estadoDe((data ?? []) as Fichaje[]);
+  const resumen = calcularJornada(data);
+  const { estado } = resumen;
+  if (resumen.actual?.pendiente) return volver(a, avisoJornada(resumen.actual), "error");
   if (!SIGUIENTES[estado].includes(tipo)) return volver(a, "Ese fichaje no corresponde ahora. Recarga la página.", "error");
   const { error } = await supabase.from("fichajes").insert({ tipo, origen: "app" });
   // La base de datos rechaza un fichaje fuera de orden (p. ej. dos entradas seguidas desde dos móviles).
-  if (error) return volver(a, error.code === "23514" ? "Ese fichaje no corresponde ahora. Recarga la página."
+  if (error) return volver(a, error.code === "23514" ? error.message
     : "No se ha podido fichar. Inténtalo de nuevo.", "error");
   enviarFichajesDespues();
   revalidatePath("/");

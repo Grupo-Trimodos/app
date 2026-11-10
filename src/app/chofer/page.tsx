@@ -1,7 +1,9 @@
+import AvisoJornada from "../AvisoJornada";
+import { leerFichajesJornada } from "@/lib/jornadas-servidor";
 import Link from "next/link";
 import Cabecera from "../Cabecera";
 import { conPermiso } from "@/lib/usuario";
-import { duracion, estadoDe, hora, inicioDia, jornadaEnCurso, minutosTrabajados, NOMBRE_ESTADO, type Fichaje } from "@/lib/jornada";
+import { duracion, calcularJornada, hora, NOMBRE_ESTADO } from "@/lib/jornada";
 import { llamarPythonDetalle } from "@/lib/python";
 import { fechaFlota, numeroFlota, NOMBRE_ESTADO_FLOTA, tienePosicion, type VehiculoFlota } from "@/lib/flota";
 import { empezarConCamion, finalizarJornada } from "./acciones";
@@ -22,18 +24,16 @@ const horasMin = (h: number) => duracion(Math.round(h * 60));
 export default async function PaginaChofer({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
   const { supabase, uid, perfil } = await conPermiso("chofer.usar");
   const { ok, error } = await searchParams;
-  const [{ data: abierta }, { data: vehs }, { data: f }, consulta] = await Promise.all([
+  const [{ data: abierta }, { data: vehs }, registro, consulta] = await Promise.all([
     supabase.from("asignaciones").select("id,inicio,origen,vehiculos(matricula,modelo)").eq("usuario_id", uid).is("fin", null).maybeSingle(),
     supabase.from("vehiculos").select("id,matricula,modelo").eq("activo", true).order("matricula"),
-    supabase.from("fichajes").select("id,usuario_id,tipo,momento,origen,nota,odoo_estado,odoo_error")
-      .eq("usuario_id", uid).gte("momento", inicioDia(1).toISOString()).order("momento"),
+    leerFichajesJornada(supabase, uid),
     llamarPythonDetalle<Hoy>("/api/chofer/hoy", { espera: 25000 }),
   ]);
   const camion = abierta as unknown as { id: number; inicio: string; origen: string; vehiculos: { matricula: string; modelo: string | null } } | null;
   const vehiculos = (vehs ?? []) as { id: number; matricula: string; modelo: string | null }[];
-  const fichajes = (f ?? []) as Fichaje[];
-  const estado = estadoDe(fichajes);
-  const hoyF = estado === "fuera" ? fichajes.filter((x) => new Date(x.momento).getTime() >= inicioDia().getTime()) : jornadaEnCurso(fichajes);
+  const resumen = calcularJornada(registro.data);
+  const { estado, minutosVisibles } = resumen;
   const movil = consulta.datos;
   const tarjeta = movil?.tarjeta;
   const r = movil?.resumen;
@@ -93,9 +93,10 @@ export default async function PaginaChofer({ searchParams }: { searchParams: Pro
           <p className="hint" style={{ marginTop: 12 }}>Datos del vehículo; los tiempos de conducción y descanso se consultan en el tacógrafo.</p>
         </section>}
 
+        <AvisoJornada resumen={resumen} error={!!registro.error} />
         {!r && <section className="panel"><p className="hint">Tu jornada registrada</p>
-          <p className="estado-grande">{duracion(minutosTrabajados(hoyF))}</p>
-          <span className="etiqueta">{NOMBRE_ESTADO[estado]}</span>
+          <p className="estado-grande">{registro.error ? "—" : duracion(minutosVisibles)}</p>
+          <span className="etiqueta">{registro.error ? "Sin datos de jornada" : NOMBRE_ESTADO[estado]}</span>
         </section>}
 
         {r && (
@@ -103,7 +104,7 @@ export default async function PaginaChofer({ searchParams }: { searchParams: Pro
             <div className="panel"><b>{horasMin(r.conduccion_horas)}</b><span>Conducción hoy (máx. {r.limite_diario_horas} h)</span></div>
             <div className="panel"><b>{r.km} km</b><span>Hoy</span></div>
             <div className="panel"><b>{horasMin(r.pausa_en_horas)}</b><span>Hasta la pausa obligatoria</span></div>
-            <div className="panel"><b>{duracion(minutosTrabajados(hoyF))}</b><span>Jornada fichada</span></div>
+            <div className="panel"><b>{registro.error ? "—" : duracion(minutosVisibles)}</b><span>Jornada fichada</span></div>
           </section>
         )}
 
@@ -123,7 +124,7 @@ export default async function PaginaChofer({ searchParams }: { searchParams: Pro
           )}
         </details>
 
-        {camion && (
+        {camion && !registro.error && estado !== "pendiente" && (
           <form action={finalizarJornada}>
             <button className="btn ancho grande">Terminar la jornada</button>
             <p className="hint">Se cierra el camión y se ficha tu salida. Para las pausas, usa <Link href="/fichaje">Fichaje</Link>.</p>

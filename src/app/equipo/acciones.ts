@@ -52,7 +52,7 @@ export async function corregirFichaje(form: FormData) {
   const { error } = await supabase.from("fichajes").insert({ usuario_id, tipo, momento: momento.toISOString(), origen: "correccion", nota });
   if (error) return volver("No se ha podido guardar la corrección.", "error");
   enviarFichajesDespues(usuario_id);
-  revalidatePath("/equipo");
+  for (const ruta of ["/", "/equipo", "/fichaje", "/chofer", "/pendientes"]) revalidatePath(ruta);
   return volver("Corrección anotada.");
 }
 
@@ -63,4 +63,22 @@ export async function reintentarOdoo(form: FormData) {
   revalidatePath("/equipo");
   const { texto, bien } = resultadoEnvio(r, "su");
   return volver(bien ? texto : `${texto} Revisa el fichaje en Odoo.`, bien ? "ok" : "error");
+}
+
+/** Añade la salida real de la jornada seleccionada. La RPC comprueba permiso y concurrencia con RLS. */
+export async function cerrarJornada(form: FormData) {
+  const { supabase } = await conPermiso("fichaje.corregir");
+  const entrada_id = Number(form.get("entrada_id"));
+  const motivo = String(form.get("nota") ?? "").trim();
+  const momento = madridAInstante(String(form.get("momento") ?? ""));
+  if (!Number.isSafeInteger(entrada_id) || entrada_id <= 0 || !momento || momento.getTime() > Date.now())
+    return volver("Revisa la jornada y la fecha y hora de salida.", "error");
+  if (!motivo || motivo.length > 300) return volver("Explica el motivo en un máximo de 300 caracteres.", "error");
+  const { data: entrada, error: lectura } = await supabase.from("fichajes").select("usuario_id").eq("id", entrada_id).single();
+  if (lectura || !entrada) return volver("No se ha podido consultar esa jornada.", "error");
+  const { error } = await supabase.rpc("cerrar_jornada", { entrada_id, momento_salida: momento.toISOString(), motivo });
+  if (error) return volver(error.code === "23514" ? error.message : "No se ha podido cerrar esta jornada. Comprueba tus permisos e inténtalo de nuevo.", "error");
+  enviarFichajesDespues(entrada.usuario_id);
+  for (const ruta of ["/", "/equipo", "/fichaje", "/chofer", "/pendientes"]) revalidatePath(ruta);
+  return volver("Jornada cerrada. La salida real, el motivo y el autor han quedado registrados.");
 }

@@ -1,10 +1,12 @@
 import Link from "next/link";
+import AvisoJornada from "./AvisoJornada";
+import { leerFichajesJornada } from "@/lib/jornadas-servidor";
 import EstadoOdoo from "./EstadoOdoo";
 import Icono, { ICONOS_AREA } from "./Icono";
 import { fichar, reintentarOdoo } from "./fichaje/acciones";
 import { confirmarDotacion } from "./ropa/acciones";
 import {
-  BOTON_TIPO, duracion, estadoDe, hora, inicioDia, inicioSemana, jornadaEnCurso, minutosPorDia, minutosTrabajados, NOMBRE_ESTADO, SIGUIENTES,
+  BOTON_TIPO, duracion, calcularJornada, hora, inicioSemana, NOMBRE_ESTADO, SIGUIENTES,
   type Fichaje,
 } from "@/lib/jornada";
 import { misPendientes } from "@/lib/pendientes";
@@ -22,10 +24,9 @@ export default async function InicioCampo({ nombre, ok, error }: { nombre: strin
   const temporada = temporadaActual();
   const conRopa = esDeSuPuesto("ropa.pedir");
   if (conRopa) await supabase.rpc("preparar_dotaciones");
-  const semana = inicioSemana(), ayer = inicioDia(1);
+  const semana = inicioSemana();
   const [registro, camion, dotacion, tallas, { tareas }] = await Promise.all([
-    esDeSuPuesto("fichaje.fichar", "chofer.usar") ? supabase.from("fichajes").select("tipo,momento,odoo_estado,odoo_error").eq("usuario_id", uid)
-      .gte("momento", new Date(Math.min(semana.getTime(), ayer.getTime())).toISOString()).order("momento") : null,
+    esDeSuPuesto("fichaje.fichar", "chofer.usar") ? leerFichajesJornada(supabase, uid, semana) : null,
     esDeSuPuesto("chofer.usar") ? supabase.from("asignaciones").select("vehiculos(matricula)").eq("usuario_id", uid).is("fin", null)
       .maybeSingle<{ vehiculos: { matricula: string } | null }>() : null,
     conRopa ? supabase.from("ropa_dotaciones").select("id,prendas,estado,entregado_en").eq("usuario_id", uid).eq("temporada", temporada)
@@ -35,11 +36,8 @@ export default async function InicioCampo({ nombre, ok, error }: { nombre: strin
   ]);
 
   const fichajes = (registro?.data ?? []) as Fichaje[];
-  const ultimas24 = fichajes.filter((f) => new Date(f.momento).getTime() >= ayer.getTime());
-  const estado = estadoDe(ultimas24);
-  const deHoy = fichajes.filter((f) => new Date(f.momento).getTime() >= inicioDia().getTime());
-  const minutosHoy = minutosTrabajados(estado === "fuera" ? deHoy : jornadaEnCurso(ultimas24));
-  const minutosSemana = minutosPorDia(fichajes.filter((f) => new Date(f.momento).getTime() >= semana.getTime()));
+  const resumen = calcularJornada(fichajes);
+  const { estado, minutosVisibles: minutosHoy, minutosSemana } = resumen;
   const ultimo = fichajes.at(-1);
   const sinEnviar = fichajes.some((f) => ["pendiente", "error", "sin_empleado"].includes(f.odoo_estado));
   const matricula = camion?.data?.vehiculos?.matricula;
@@ -78,12 +76,13 @@ export default async function InicioCampo({ nombre, ok, error }: { nombre: strin
       <h2 id="campo-jornada-t" className="sr-only">Mi jornada</h2>
       <span className={`inicio-estado ${registro.error ? "" : estado}`}><i />{registro.error ? "Sin datos de jornada" : NOMBRE_ESTADO[estado]}</span>
       <p className="campo-jornada-tiempo">{registro.error ? "—" : duracion(minutosHoy)}</p>
-      <p className="campo-jornada-sub">{estado === "fuera" ? "Trabajado hoy" : "Llevas en esta jornada"} · semana {duracion(minutosSemana)}</p>
+      <p className="campo-jornada-sub">{estado === "fuera" ? "Trabajado hoy" : "Llevas en esta jornada"} · semana cerrada {duracion(minutosSemana)}</p>
       {esDeSuPuesto("chofer.usar") && <Link href="/chofer" className={`campo-camion ${matricula ? "" : "falta"}`}>
         <Icono nombre="camion" size={20} /><span>{matricula ? <>Camión <b>{matricula}</b></> : "Confirma tu camión al subir a la cabina"}</span>
         <Icono nombre="flecha" size={18} /></Link>}
+      <AvisoJornada resumen={resumen} error={!!registro?.error} />
       <div className="campo-botones">
-        {esDeSuPuesto("fichaje.fichar") ? SIGUIENTES[estado].map((t, i) => <form key={t} action={fichar}>
+        {esDeSuPuesto("fichaje.fichar") ? (registro?.error ? [] : SIGUIENTES[estado]).map((t, i) => <form key={t} action={fichar}>
           <input type="hidden" name="tipo" value={t} /><input type="hidden" name="volver" value="/" />
           <button className={`btn ancho grande ${i === 0 ? "primario" : "campo-secundario"}`}>{BOTON_TIPO[t]}</button>
         </form>) : <Link className="btn ancho grande primario" href="/chofer">Ir a mi camión</Link>}
