@@ -74,12 +74,16 @@ function CamposPerfil({ p }: { p?: PerfilRol }) {
         </select></div>}
     </div>
     <label style={{ marginTop: 12 }}>Qué puede ver y hacer</label>
+    <p className="hint">Selecciona solo las tareas del puesto. El departamento y el cargo de Odoo no conceden permisos por sí solos.</p>
+    {p && <p className="aviso">Alcance actual: {p.todos_los_centros ? "gestión sobre todos los centros" : "gestión limitada a los centros asignados"}.
+      {p.permisos.some(x => ["direccion.ver", "direccion.finanzas", "flota.ver", "transporte.ver", "organizacion.ver"].includes(x)) && " Este perfil también tiene consultas globales; no se limitan por centro."}
+      {p.permisos.includes("admin.usuarios") && " Puede administrar accesos y conceder permisos."}</p>}
     <ElegirPermisos marcados={p?.permisos} />
     <div className="areas-permisos" style={{ marginTop: 12 }}><fieldset>
       <legend>Documentación que pide este puesto</legend>
       {Object.entries(DOCUMENTOS_PERSONA).map(([id, nombre]) => <label key={id}>
         <input type="checkbox" name="documentos" value={id} defaultChecked={p?.documentos.includes(id)} /> {nombre}</label>)}
-      <span className="hint">A quien tenga este perfil se le pedirá en «Mi documentación» y se le avisará en su inicio.</span>
+      <span className="hint">Se utilizan en «Mi documentación» si también marcas su permiso. Elegir documentos no concede acceso automáticamente.</span>
     </fieldset></div>
     <label className="chips" style={{ marginTop: 12 }}>
       <span><input type="checkbox" name="todos_los_centros" defaultChecked={p?.todos_los_centros} /> Sus permisos sobre otras

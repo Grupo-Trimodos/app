@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import MiOrganizacion from "./MiOrganizacion";
 import Link from "next/link";
 import AvisoJornada from "./AvisoJornada";
 import { leerFichajesJornada } from "@/lib/jornadas-servidor";
@@ -69,6 +71,7 @@ export default async function InicioCampo({ nombre, ok, error }: { nombre: strin
       <h1>{saludo}{nombre ? `, ${nombre.split(/[ @]/)[0]}` : ""}</h1>
       <p><span>{hoyTexto}</span></p>
     </div>
+    <Suspense fallback={null}><MiOrganizacion /></Suspense>
     {ok && <p className="aviso" role="status">{ok}</p>}
     {error && <p className="error" role="alert">{error}</p>}
 

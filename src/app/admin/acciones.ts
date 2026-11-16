@@ -180,8 +180,7 @@ function leerPerfil(form: FormData) {
   };
   // La pantalla solo se cambia en los perfiles que no son de los cuatro básicos (en esos, el campo no se envía).
   if (form.has("pantalla")) datos.pantalla = PANTALLAS.includes(pantalla) ? pantalla : null;
-  // Si el puesto pide documentación, quien lo tenga tiene que poder rellenarla (si no, «falta» para siempre).
-  if (datos.documentos.length && !datos.permisos.includes("documentos.propios")) datos.permisos.push("documentos.propios");
+  // Los documentos requeridos no conceden acceso: los permisos se eligen explícitamente.
   return datos;
 }
 

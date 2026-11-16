@@ -52,7 +52,7 @@ app no las cambia en Odoo. La sincronización desde Odoo está por hacer: hoy la
   - **Responsable** (complemento): ver a su equipo, aprobar vacaciones y corregir fichajes de su centro.
   - **Seguridad** (complemento): sin permisos durante el piloto.
   - El superadministrador sigue teniéndolo todo.
-  - Al guardar el perfil Chófer en Administración vuelve «Mi documentación» (`documentos.propios`), porque el puesto pide documentos. Para que no vuelva, hay que desmarcar también esos documentos.
+  - Guardar un perfil ya no concede `documentos.propios` por tener documentos exigidos: el permiso se selecciona expresamente.
   - El cuadro de mando cuenta como chóferes a quien tiene «Mi camión» (`chofer.usar`), así que durante el piloto esa cifra sale a 0.
 - **Administración a escala** (`/admin`), con pestañas:
   - **Personas:** búsqueda, filtros por centro, perfil y estado y páginas de 50. Quien entra por primera vez con Google o Microsoft aparece en «Por configurar» y se activa **en bloque**: se marcan, se elige puesto y centro, y listo. «Cambiar puesto» sustituye el puesto y conserva los complementos.
@@ -66,3 +66,14 @@ app no las cambia en Odoo. La sincronización desde Odoo está por hacer: hoy la
   - **Permisos:** `ropa.pedir`, `ropa.gestionar` y `ropa.configurar` (para la composición).
 - **Chóferes por cliente o ruta** (`/equipo/zonas`; tablas `zonas` y `chofer_zona`; permiso `zonas.gestionar`): cada chófer de sus centros tiene una zona, que es un cliente o una ruta. Se asignan todos de una vez. El cuadro de mando separa a los chóferes por zona: cuántos hay, cuántos han fichado y trabajan, cuántos tienen camión y su documentación.
 - **Analítica de cada centro** (Administración → Centros; tabla `centro_analitica`): qué cuentas o etiquetas analíticas de Odoo son de cada centro. Con ellas el cuadro de mando separa ingresos, gastos y margen por centro. Una cuenta o etiqueta solo puede ser de un centro.
+
+
+## Organización y procedencia (16-11-2026)
+
+`/organizacion` muestra la estructura actual de Odoo y propone relaciones revisables con los centros de la app.
+Requiere `organizacion.ver` (global, sin fichas personales). No cambia los centros, asignaciones ni permisos.
+El inicio de campo y oficina muestra «Mi empresa y mi equipo» con la ficha del propio empleado vinculado.
+La ruta personal exige sesión y obtiene el id de Odoo desde la fila del usuario autenticado; no acepta elegir otra persona.
+El catálogo de transporte muestra primero flota propia; los contactos y vehículos externos necesitan `transporte.externos`
+además de `transporte.ver`. No se asignan automáticamente estos permisos a ningún perfil.
+Mapa de conceptos, pruebas y límites: [mapa-organizacion-odoo.md](mapa-organizacion-odoo.md).

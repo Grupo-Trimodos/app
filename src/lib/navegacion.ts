@@ -4,10 +4,10 @@ export type Enlace = { id: string; nombre: string; ruta: string };
 
 const NOMBRES: Record<string, string> = { flota: "Centro de flota", ausencias: "Mis ausencias", deca: "Órdenes de transporte" };
 const ORDEN: Record<string, number> = {
-  direccion: 0, flota: 1, chofer: 2, deca: 3, fichaje: 4, ausencias: 5, ropa: 6, documentos: 7, incidencias: 8, equipo: 9, seguridad: 10, admin: 11,
+  direccion: 0, organizacion: 0.5, transporte: 0.7, flota: 1, chofer: 2, deca: 3, fichaje: 4, ausencias: 5, ropa: 6, documentos: 7, incidencias: 8, equipo: 9, seguridad: 10, admin: 11,
 };
 export const ICONOS_AREA: Record<string, string> = {
-  direccion: "actividad", flota: "flota", fichaje: "reloj", chofer: "camion", ausencias: "calendario", equipo: "equipo", deca: "documento", admin: "ajustes",
+  direccion: "actividad", organizacion: "equipo", transporte: "camion", flota: "flota", fichaje: "reloj", chofer: "camion", ausencias: "calendario", equipo: "equipo", deca: "documento", admin: "ajustes",
   documentos: "documento", incidencias: "aviso", seguridad: "escudo", ropa: "ropa",
 };
 

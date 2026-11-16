@@ -1,3 +1,4 @@
+import OrigenDato from "../OrigenDato";
 import { leerFichajesJornada, leerPendientesCierre } from "@/lib/jornadas-servidor";
 import Link from "next/link";
 import SinEnvioConIntro from "../SinEnvioConIntro";
@@ -103,6 +104,9 @@ export default async function PaginaEquipo({ searchParams }: { searchParams: Pro
       <main className="contenido">
         <div className="admin-cabecera"><h1>Mi equipo</h1>
           {puede("zonas.gestionar") && <Link className="btn pequeno" href="/equipo/zonas">Chóferes por cliente o ruta</Link>}</div>
+        <OrigenDato fuente="App · Personas de tu equipo">
+          <p>Personas con acceso a la app dentro de tu alcance por centro y departamento. Los fichajes, solicitudes y camiones confirmados proceden de la app.</p>
+        </OrigenDato>
         {centros.length > 1 && (
           <nav className="chips" style={{ margin: "8px 0 16px" }} aria-label="Centro">
             {centros.map((c) => (

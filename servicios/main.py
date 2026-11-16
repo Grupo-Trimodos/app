@@ -141,12 +141,13 @@ async def security_headers(request: Request, call_next):
 
 
 # Fichaje y ausencias (envío a Odoo) y datos de Movildata para chóferes.
-from . import chofer, direccion, flota, rrhh, sincronizacion  # noqa: E402
+from . import chofer, direccion, flota, organizacion, rrhh, sincronizacion  # noqa: E402
 
 rrhh._odoo_factory = get_odoo
 app.include_router(rrhh.router)
 app.include_router(chofer.router)
 app.include_router(flota.router)
+app.include_router(organizacion.router)
 app.include_router(sincronizacion.router)
 app.include_router(direccion.router)
 

@@ -1,3 +1,4 @@
+import MiOrganizacion from "./MiOrganizacion";
 import Link from "next/link";
 import AvisoJornada from "./AvisoJornada";
 import { leerFichajesJornada, jornadasPorPersona } from "@/lib/jornadas-servidor";
@@ -37,7 +38,7 @@ const detalles: Record<string, { titulo: string; descripcion: string; etiqueta: 
   seguridad: { titulo: "Seguridad", descripcion: "ITV, documentación, carretillas, inspecciones de almacén e incidencias.", etiqueta: "PREVENCIÓN" },
   admin: { titulo: "Administración", descripcion: "Gestiona los accesos, los centros, los vehículos y la sincronización.", etiqueta: "GESTIÓN" },
 };
-const orden = ["flota", "chofer", "deca", "fichaje", "ausencias", "ropa", "documentos", "incidencias", "equipo", "seguridad", "admin"];
+const orden = ["organizacion", "transporte", "flota", "chofer", "deca", "fichaje", "ausencias", "ropa", "documentos", "incidencias", "equipo", "seguridad", "admin"];
 
 type Indicador = { href: string; icono: string; titulo: string; valor: string; detalle: string; atencion?: boolean };
 
@@ -202,6 +203,7 @@ export default async function Inicio({ searchParams }: { searchParams: Promise<{
         </div>
         <div className="inicio-fecha"><Icono nombre="calendario" size={19} /><span>{hoyTexto}</span></div>
       </div>
+      {perfil?.activo && <Suspense fallback={null}><MiOrganizacion /></Suspense>}
       {ok && <p className="aviso" role="status">{ok}</p>}
       {error && <p className="error" role="alert">{error}</p>}
 

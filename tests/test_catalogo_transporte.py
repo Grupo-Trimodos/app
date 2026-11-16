@@ -37,12 +37,33 @@ def test_catalogo_limita_y_no_expone_campos_personales(monkeypatch):
         llamadas.append((modelo, metodo, args, kwargs))
         return [{"id": i, "name": "Conductor", "license_plate": "1234ABC", "email": "privado"} for i in range(101)]
     monkeypatch.setattr(c, "_call", leer)
-    r = c.catalogo_transporte("ABC")
+    r = c.catalogo_transporte("ABC", incluir_externos=True)
     assert r["limitado"] and len(r["vehiculos"]) == len(r["choferes"]) == 100
     assert all("email" not in row for row in r["choferes"])
-    assert r["vehiculos"][0]["empresa"] == "Sin empresa asignada"
+    assert r["vehiculos"][0]["empresa"] == "Sin asignar"
     for modelo, metodo, args, kwargs in llamadas:
         assert metodo == "search_read"
         assert ["company_id", "in", c.s.company_ids] in args[0]
         assert ["active", "=", True] in args[0]
     assert ["is_driver", "=", True] in llamadas[1][2][0]
+
+
+def test_flota_propia_no_lee_contactos_externos(monkeypatch):
+    c = OdooClient(get_settings())
+    llamadas = []
+    def leer(modelo, metodo, args, kwargs):
+        llamadas.append((modelo, args))
+        return [{"id": 1, "license_plate": "1234ABC", "company_owner_id": [1, "Propietaria"], "company_id": False}]
+    monkeypatch.setattr(c, "_call", leer)
+    r = c.catalogo_transporte()
+    assert r["choferes"] == [] and not r["incluye_externos"]
+    assert r["vehiculos"][0]["empresa"] == "Propietaria"
+    assert len(llamadas) == 1 and llamadas[0][0] == "fleet.vehicle"
+    assert ["is_own_vehicle", "=", True] in llamadas[0][1][0]
+    assert ["company_owner_id", "in", c.s.company_ids] in llamadas[0][1][0]
+
+
+def test_externos_requiere_permiso_adicional():
+    with pytest.raises(AppError) as e:
+        catalogo_odoo(buscar="", externos=True, u=Usuario("u", "U", ("transporte.ver",), token="t"))
+    assert e.value.status == 403

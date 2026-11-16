@@ -1,3 +1,4 @@
+import OrigenDato from "../OrigenDato";
 import Cabecera from "../Cabecera";
 import { documentosDe } from "@/lib/documentos";
 import { CLASE_CADUCIDAD, DIAS_AVISO, fechaLarga, NOMBRE_CADUCIDAD, SIN_CADUCIDAD } from "@/lib/seguridad";
@@ -17,6 +18,7 @@ export default async function MiDocumentacion({ searchParams }: { searchParams: 
     <Cabecera nombre={perfil.nombre || perfil.codigo || ""} />
     <main className="contenido estrecho">
       <h1>Mi documentación</h1>
+        <OrigenDato fuente="App · Documentación registrada"><p>Esta pantalla muestra los documentos registrados en la app. Todavía no consulta los carnés y certificados de Odoo.</p></OrigenDato>
       <p className="lead">Apunta cuándo caduca cada documento de tu puesto. Te avisaremos {DIAS_AVISO} días antes.</p>
       {ok && <p className="aviso" role="status">{ok}</p>}
       {error && <p className="error" role="alert">{error}</p>}

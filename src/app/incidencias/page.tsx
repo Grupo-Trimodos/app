@@ -1,3 +1,4 @@
+import OrigenDato from "../OrigenDato";
 import Cabecera from "../Cabecera";
 import { fecha, hora } from "@/lib/jornada";
 import { ESTADO_INCIDENCIA, GRAVEDAD, TIPOS_INCIDENCIA } from "@/lib/seguridad";
@@ -22,6 +23,7 @@ export default async function Incidencias({ searchParams }: { searchParams: Prom
     <Cabecera nombre={perfil.nombre || perfil.codigo || ""} />
     <main className="contenido estrecho">
       <h1>Incidencias</h1>
+        <OrigenDato fuente="App · Incidencias"><p>Avisos registrados en la app; se muestran según tus permisos.</p></OrigenDato>
       <p className="lead">¿Ha pasado algo? Cuéntalo aquí y le llega a seguridad al momento. Si hay heridos, llama primero al 112.</p>
       {ok && <p className="aviso" role="status">{ok}</p>}
       {error && <p className="error" role="alert">{error}</p>}

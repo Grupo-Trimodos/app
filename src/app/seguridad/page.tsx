@@ -1,3 +1,4 @@
+import OrigenDato from "../OrigenDato";
 import Link from "next/link";
 import Cabecera from "../Cabecera";
 import Icono from "../Icono";
@@ -81,6 +82,7 @@ export default async function Seguridad({ searchParams }: {
     <Cabecera nombre={perfil.nombre || perfil.email || perfil.codigo || ""} />
     <main className="contenido">
       <h1>Seguridad</h1>
+        <OrigenDato fuente="App · Documentación e inspecciones"><p>Revisiones, documentos e incidencias registrados en la app. La documentación de vehículos y chóferes de Odoo todavía no está conectada a esta pantalla.</p></OrigenDato>
       <p className="lead">Caducidades de vehículos y personas, carretillas, inspecciones de almacén, incidencias y ropa de trabajo y EPIs.
         Se avisa 30 días antes.</p>
       {ok && <p className="aviso" role="status">{ok}</p>}

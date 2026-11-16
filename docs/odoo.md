@@ -101,3 +101,10 @@ que se asigna desde Perfiles; no se concede automáticamente a perfiles existent
 Conexión comprobada: la URL de `.env.local`, `https://www.grupotrimodos.com`, responde con Odoo 18.
 La dirección anterior `stinsa18.tecnativa.net` devolvió HTTP 503 en esta revisión.
 La comprobación fue por API real, sin escrituras; no se comparó con la pantalla de Odoo ni se usó un entorno de pruebas.
+
+
+La revisión posterior del 16-11-2026 separa el catálogo externo de la **flota propia**: la consulta inicial usa
+`is_own_vehicle=true` y `company_owner_id` de las empresas configuradas. El catálogo anterior se conserva tras el permiso
+adicional `transporte.externos`; los contactos conductores no representan empleados.
+La organización se lee de `hr.employee`, `hr.department`, `hr.work.location` y `hr.job`, sin copias editables.
+Correspondencias y validación: [mapa-organizacion-odoo.md](mapa-organizacion-odoo.md).

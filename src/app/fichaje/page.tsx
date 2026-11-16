@@ -1,3 +1,4 @@
+import OrigenDato from "../OrigenDato";
 import AvisoJornada from "../AvisoJornada";
 import { leerFichajesJornada } from "@/lib/jornadas-servidor";
 import Cabecera from "../Cabecera";
@@ -26,6 +27,7 @@ export default async function PaginaFichaje({ searchParams }: { searchParams: Pr
       <Cabecera nombre={perfil.nombre || perfil.codigo || ""} />
       <main className="contenido estrecho">
         <h1>Fichaje</h1>
+        <OrigenDato fuente="App · Registro de jornada"><p>Entradas, pausas y salidas registradas en la app. Cada movimiento indica si está pendiente, enviado a Odoo o necesita revisión.</p></OrigenDato>
         {ok && <p className="aviso" role="status">{ok}</p>}
         {error && <p className="error" role="alert">{error}</p>}
 

@@ -1,3 +1,4 @@
+import OrigenDato from "../OrigenDato";
 import Cabecera from "../Cabecera";
 import EstadoOdoo from "../EstadoOdoo";
 import QuienAprueba from "../QuienAprueba";
@@ -31,6 +32,7 @@ export default async function PaginaAusencias({ searchParams }: { searchParams: 
       <Cabecera nombre={perfil.nombre || perfil.codigo || ""} />
       <main className="contenido estrecho">
         <h1>Vacaciones y ausencias</h1>
+        <OrigenDato fuente="App · Solicitudes"><p>Estas solicitudes se gestionan en la app y las aprobadas se envían a Odoo. Esta lista no es el saldo de vacaciones de Odoo.</p></OrigenDato>
         <QuienAprueba permiso="ausencias.aprobar" que="solicitudes" />
         {ok && <p className="aviso" role="status">{ok}</p>}
         {error && <p className="error" role="alert">{error}</p>}

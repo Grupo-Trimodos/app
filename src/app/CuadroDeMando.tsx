@@ -1,3 +1,4 @@
+import OrigenDato from "./OrigenDato";
 import Link from "next/link";
 import { cache, Suspense } from "react";
 import Icono from "./Icono";
@@ -171,7 +172,7 @@ function Barras({ filas }: { filas: { etiqueta: string; detalle?: string; valor:
 // ---------------------------------------------------------------- bloques de Odoo
 async function AlertasFinanzas({ empresa, base }: { empresa: string; base: string }) {
   const { datos } = await leerFinanzas(empresa);
-  if (!datos) return null;
+  if (!datos || datos.modo === "simulado") return null;
   const alertas: { texto: string; valor: string; href: string; grave: boolean }[] = [];
   if (datos.cobros?.vencido) alertas.push({ texto: `Cobros vencidos · ${datos.cobros.n_vencido} facturas`, valor: eurosCorto(datos.cobros.vencido),
     href: `${base}?ver=finanzas`, grave: (datos.cobros.tramos.find((t) => t.tramo === "mas_90")?.importe ?? 0) > 0 });
@@ -185,6 +186,7 @@ async function AlertasFinanzas({ empresa, base }: { empresa: string; base: strin
 async function CifrasNegocio({ empresa, base }: { empresa: string; base: string }) {
   const { datos, error } = await leerFinanzas(empresa);
   if (!datos) return <p className="cm-aviso">No se han podido leer las finanzas de Odoo: {error}</p>;
+  if (datos.modo === "simulado") return <p className="cm-aviso">Odoo está en modo de prueba. No se muestran cifras de ejemplo como datos del negocio.</p>;
   const { facturacion: f, cobros: c, pagos: p, sin_facturar: s } = datos;
   return <div className="cm-cifras">
     <Cifra titulo="Facturado este mes" valor={f ? eurosCorto(f.mes) : "—"} href={`${base}?ver=finanzas`}>
@@ -262,7 +264,7 @@ async function TablaCentros({ r, empresa, base, conFinanzas, aAdmin }: { r: Resu
       empresas={(await leerFinanzas(empresa)).datos?.empresas ?? []} /><Avisos d={odoo.datos} /></>}
     {conFinanzas && !odoo?.datos && <p className="cm-aviso">No se han podido leer las cifras por centro: {odoo?.error}</p>}
     <div className="cm-panel"><div className="cm-tabla-caja"><table className="cm-tabla">
-      <thead><tr><th>Centro</th><th>Plantilla</th><th>Presencia hoy</th><th>Ausentes</th><th>Por aprobar</th><th>Responsable</th>
+      <thead><tr><th>Centro</th><th>Personas en la app</th><th>Presencia hoy</th><th>Ausentes</th><th>Por aprobar</th><th>Responsable</th>
         {conFinanzas && <><th>Ingresos mes</th><th>Gastos mes</th><th>Margen mes</th><th>Margen año</th></>}</tr></thead>
       <tbody>
         {r.centros.map((c) => {
@@ -399,6 +401,9 @@ export default async function CuadroDeMando({ ver, empresa = "", base = "/" }: {
     </nav>
 
     {!r ? <p className="error">No se ha podido cargar el cuadro de mando{error ? `: ${error.message}` : ""}.</p> : <>
+      {vista !== "resumen" && <OrigenDato fuente="App y Odoo, según el bloque">
+        <p>Personas, centros, fichajes, ropa e incidencias: registros de la app. Negocio y finanzas: Odoo de las empresas configuradas, con sus avisos de disponibilidad.</p>
+      </OrigenDato>}
       {vista === "resumen" && <>
         <section className="cm-alertas" aria-label="Alertas">
           {finanzas && <Suspense fallback={null}><AlertasFinanzas empresa={empresaValida} base={base} /></Suspense>}
@@ -409,16 +414,20 @@ export default async function CuadroDeMando({ ver, empresa = "", base = "/" }: {
           {p!.odoo_error > 0 && <Alerta href={a.sincronizacion} icono="actualizar" texto="Fichajes o ausencias que no han llegado a Odoo" valor={p!.odoo_error} />}
         </section>
 
-        {finanzas && <Seccion titulo="Negocio" id="cm-negocio" nota={<span className="cm-nota">Odoo · sin IVA · {empresaValida ? "empresa elegida" : "todo el grupo"}</span>}>
+        {finanzas && <Seccion titulo="Negocio" id="cm-negocio" nota={<span className="cm-nota">Odoo · sin IVA · {empresaValida ? "empresa elegida" : "empresas configuradas"}</span>}>
           <Suspense fallback={<Cargando texto="Consultando Odoo…" />}><CifrasNegocio empresa={empresaValida} base={base} /></Suspense>
         </Seccion>}
 
-        <Seccion titulo="Personas hoy" id="cm-personas-hoy">
+        <Seccion titulo="Personas en la app" id="cm-personas-hoy">
+          <OrigenDato fuente="App · Cuentas, fichajes y solicitudes">
+            <p>Estas cifras describen a quienes tienen acceso a la app, no la plantilla completa de Odoo. Los chóferes de este bloque son las cuentas con permiso para usar «Mi camión».</p>
+          </OrigenDato>
+          {puede("organizacion.ver") && <p><Link className="cm-enlace" href="/organizacion">Ver plantilla y organización de Odoo</Link></p>}
           <div className="cm-cifras">
-            <Cifra titulo="Plantilla activa" valor={num(r.plantilla)} detalle={`${r.altas_mes} altas este mes · ${r.centros.length} centros`} href={a.configurar} />
+            <Cifra titulo="Cuentas activas" valor={num(r.plantilla)} detalle={`${r.altas_mes} altas este mes · ${r.centros.length} centros`} href={a.configurar} />
             <Cifra titulo="Presencia" valor={`${presencia} %`} barra={presencia} href={a.equipo}
               detalle={`${num(r.fichados)} han fichado · media ${Math.round(media)} al día`} />
-            <Cifra titulo="Chóferes trabajando" valor={`${num(r.choferes_trabajando)} / ${num(r.choferes)}`} barra={pct(r.choferes_trabajando, r.choferes)}
+            <Cifra titulo="Mi camión · trabajando" valor={`${num(r.choferes_trabajando)} / ${num(r.choferes)}`} barra={pct(r.choferes_trabajando, r.choferes)}
               detalle={`${r.choferes_con_camion} con camión confirmado`} href={`${base}?ver=centros#zonas`} />
             <Cifra titulo="Días de ausencia" valor={num(r.ausencias.dias_mes)} detalle={`Este mes · hoy ausentes ${r.ausentes}`}>
               <Variacion actual={r.ausencias.dias_mes} antes={r.ausencias.dias_mes_anterior} frente="vs. mes anterior" menosEsMejor />

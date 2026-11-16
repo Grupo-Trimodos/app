@@ -36,16 +36,18 @@ def recorrido(matricula: str, fecha: date = Query(...), u: Usuario = Depends(req
 
 
 @router.get("/catalogo-odoo")
-def catalogo_odoo(buscar: str = Query("", max_length=100), u: Usuario = Depends(requiere_permiso("transporte.ver"))):
+def catalogo_odoo(buscar: str = Query("", max_length=100), externos: bool = False, u: Usuario = Depends(requiere_permiso("transporte.ver"))):
     _sesion_real(u)
     from .config import get_settings
     from .odoo_client import OdooClient
+    if externos and not u.puede("transporte.externos"):
+        raise AppError("No tienes permiso para consultar el catálogo de transporte externo.", 403, "sin_permiso")
     s = get_settings()
     if s.mode != "real":
         raise AppError("La consulta de chóferes y vehículos necesita la conexión real con Odoo.", 503, "odoo_no_configurado")
     cliente = OdooClient(s)
     try:
-        return cliente.catalogo_transporte(buscar.strip())
+        return cliente.catalogo_transporte(buscar.strip(), incluir_externos=externos)
     finally:
         cliente._http.close()
         cliente._anon.close()

@@ -486,24 +486,62 @@ class OdooClient:
     def tipos_ausencia(self) -> list[dict]:
         return self._call(LEAVE_TYPE_MODEL, "search_read", [[]], {"fields": ["id", "name"]})
 
-    def catalogo_transporte(self, buscar: str = "") -> dict:
+    def estructura_organizacion(self) -> dict:
+        """Solo estructura y recuentos; nunca devuelve fichas personales."""
+        dominio = [["active", "=", True], ["company_id", "in", self.s.company_ids]]
+        grupos = {}
+        for campo in ("company_id", "department_id", "work_location_id", "job_id"):
+            filas = self._call("hr.employee", "read_group", [dominio, [campo], [campo]], {"lazy": False})
+            grupos[campo] = [{"id": _m2o(f.get(campo))[0], "nombre": _m2o(f.get(campo))[1],
+                              "personas": f.get("__count", f.get(f"{campo}_count", 0))} for f in filas]
+        compartidos = ["|", ["company_id", "=", False], ["company_id", "in", self.s.company_ids]]
+        catalogos = {}
+        for nombre, modelo, campos in (
+            ("ubicaciones", "hr.work.location", ["name", "company_id"]),
+            ("departamentos", "hr.department", ["name", "company_id", "parent_id"]),
+            ("puestos", "hr.job", ["name", "company_id", "department_id"]),
+        ):
+            catalogos[nombre] = self._call(modelo, "search_read", [compartidos], {"fields": campos, "order": "id", "limit": 2001})
+            if len(catalogos[nombre]) > 2000:
+                raise AppError("La estructura de Odoo supera el límite de consulta. Avisa a administración.", 503, "estructura_incompleta")
+        return {**catalogos, "grupos": grupos,
+                "plantilla": sum(g["personas"] for g in grupos["company_id"]),
+                "sin_responsable": self._call("hr.employee", "search_count", [dominio + [["parent_id", "=", False]]])}
+
+    def organizacion_personal(self, empleado_id: int) -> dict | None:
+        """El llamador obtiene el empleado del vínculo autenticado, nunca del navegador."""
+        filas = self._call("hr.employee", "search_read", [[["id", "=", empleado_id],
+            ["active", "=", True], ["company_id", "in", self.s.company_ids]]], {
+            "fields": ["company_id", "department_id", "work_location_id", "job_id", "parent_id"], "limit": 1})
+        if not filas:
+            return None
+        f = filas[0]
+        return {etiqueta: (_m2o(f.get(campo))[1] if f.get(campo) else None) for etiqueta, campo in (
+            ("empresa", "company_id"), ("area", "department_id"), ("ubicacion", "work_location_id"),
+            ("puesto", "job_id"), ("responsable", "parent_id"))}
+
+    def catalogo_transporte(self, buscar: str = "", incluir_externos: bool = False) -> dict:
         """Catálogo global de las empresas configuradas; solo datos operativos, sin copias."""
         dominio = [["active", "=", True], "|", ["company_id", "=", False],
                    ["company_id", "in", self.s.company_ids]]
-        dominio_vehiculos = dominio + ([["license_plate", "ilike", buscar]] if buscar else [])
+        dominio_vehiculos = (dominio if incluir_externos else [
+            ["active", "=", True], ["is_own_vehicle", "=", True],
+            ["company_owner_id", "in", self.s.company_ids],
+        ]) + ([["license_plate", "ilike", buscar]] if buscar else [])
         dominio_choferes = dominio + [["is_driver", "=", True]] + ([["name", "ilike", buscar]] if buscar else [])
         vehiculos = self._call("fleet.vehicle", "search_read", [dominio_vehiculos], {
-            "fields": ["license_plate", "model_id", "company_id", "driver_id"],
+            "fields": ["license_plate", "model_id", "company_id", "company_owner_id", "driver_id"],
             "order": "license_plate,id", "limit": 101})
         choferes = self._call("res.partner", "search_read", [dominio_choferes], {
-            "fields": ["name", "company_id"], "order": "name,id", "limit": 101})
+            "fields": ["name", "company_id"], "order": "name,id", "limit": 101}) if incluir_externos else []
         return {
             "vehiculos": [{"id": v["id"], "matricula": v.get("license_plate") or "Sin matrícula",
-                           "modelo": _m2o(v.get("model_id"))[1], "empresa": _m2o(v.get("company_id"))[1] if v.get("company_id") else "Sin empresa asignada",
+                           "modelo": _m2o(v.get("model_id"))[1], "empresa": _m2o(v.get("company_owner_id") if not incluir_externos else v.get("company_id"))[1],
                            "conductor": _m2o(v.get("driver_id"))[1]} for v in vehiculos[:100]],
             "choferes": [{"id": c["id"], "nombre": c["name"],
                           "empresa": _m2o(c.get("company_id"))[1] if c.get("company_id") else "Sin empresa asignada"} for c in choferes[:100]],
             "limitado": len(vehiculos) > 100 or len(choferes) > 100,
+            "incluye_externos": incluir_externos,
         }
 
     def vehiculos_flota(self) -> list[dict]:
