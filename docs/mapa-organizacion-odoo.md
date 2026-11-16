@@ -137,3 +137,15 @@ Si se necesita tráfico por zona, hace falta un vínculo fiable vehículo↔zona
 - Los comprobadores generales existentes no terminan correctamente en Odoo 18: consultan `account.analytic.tag`,
   modelo que ya no existe. El de compatibilidad detecta además que las credenciales API no abren la sesión web del PDF.
   No se alteraron las pruebas ni la lista de escrituras para ocultarlo.
+
+## Presentación de las lecturas
+
+Organización muestra primero empleados, empresas y ubicaciones con personal. La distribución se consulta por
+pestañas, con búsqueda por nombre (sin distinguir acentos), orden por número de personas y páginas de diez filas.
+Los datos sin completar se presentan aparte; los recuentos pueden solaparse. Cada correspondencia de centro se
+abre para ver candidatos y procedencia, manteniendo la diferencia entre vínculo y propuesta.
+
+Transporte muestra matrícula, modelo, empresa y conductor en una tabla que se apila con etiquetas en móvil.
+La búsqueda sigue consultando Odoo; la paginación de veinte filas solo organiza los resultados recibidos.
+Las cifras son «En esta consulta», no totales de toda la flota. Los contactos externos conservan su permiso adicional.
+Los cambios son de presentación: no alteran consultas, escrituras, permisos ni configuración de Odoo.
