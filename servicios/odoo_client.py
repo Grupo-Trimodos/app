@@ -486,6 +486,26 @@ class OdooClient:
     def tipos_ausencia(self) -> list[dict]:
         return self._call(LEAVE_TYPE_MODEL, "search_read", [[]], {"fields": ["id", "name"]})
 
+    def catalogo_transporte(self, buscar: str = "") -> dict:
+        """Catálogo global de las empresas configuradas; solo datos operativos, sin copias."""
+        dominio = [["active", "=", True], "|", ["company_id", "=", False],
+                   ["company_id", "in", self.s.company_ids]]
+        dominio_vehiculos = dominio + ([["license_plate", "ilike", buscar]] if buscar else [])
+        dominio_choferes = dominio + [["is_driver", "=", True]] + ([["name", "ilike", buscar]] if buscar else [])
+        vehiculos = self._call("fleet.vehicle", "search_read", [dominio_vehiculos], {
+            "fields": ["license_plate", "model_id", "company_id", "driver_id"],
+            "order": "license_plate,id", "limit": 101})
+        choferes = self._call("res.partner", "search_read", [dominio_choferes], {
+            "fields": ["name", "company_id"], "order": "name,id", "limit": 101})
+        return {
+            "vehiculos": [{"id": v["id"], "matricula": v.get("license_plate") or "Sin matrícula",
+                           "modelo": _m2o(v.get("model_id"))[1], "empresa": _m2o(v.get("company_id"))[1] if v.get("company_id") else "Sin empresa asignada",
+                           "conductor": _m2o(v.get("driver_id"))[1]} for v in vehiculos[:100]],
+            "choferes": [{"id": c["id"], "nombre": c["name"],
+                          "empresa": _m2o(c.get("company_id"))[1] if c.get("company_id") else "Sin empresa asignada"} for c in choferes[:100]],
+            "limitado": len(vehiculos) > 100 or len(choferes) > 100,
+        }
+
     def vehiculos_flota(self) -> list[dict]:
         rows = self._call(FLEET_MODEL, "search_read", [[["active", "=", True]]],
                           {"fields": ["id", "license_plate", "model_id"], "limit": 2000})

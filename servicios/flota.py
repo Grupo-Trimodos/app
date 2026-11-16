@@ -33,3 +33,19 @@ def recorrido(matricula: str, fecha: date = Query(...), u: Usuario = Depends(req
         raise AppError(str(e), 404, "vehiculo_no_disponible") from None
     except movildata.MovildataError as e:
         raise AppError(str(e), 503, "movildata_no_disponible") from None
+
+
+@router.get("/catalogo-odoo")
+def catalogo_odoo(buscar: str = Query("", max_length=100), u: Usuario = Depends(requiere_permiso("transporte.ver"))):
+    _sesion_real(u)
+    from .config import get_settings
+    from .odoo_client import OdooClient
+    s = get_settings()
+    if s.mode != "real":
+        raise AppError("La consulta de chóferes y vehículos necesita la conexión real con Odoo.", 503, "odoo_no_configurado")
+    cliente = OdooClient(s)
+    try:
+        return cliente.catalogo_transporte(buscar.strip())
+    finally:
+        cliente._http.close()
+        cliente._anon.close()

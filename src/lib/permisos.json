@@ -2,6 +2,13 @@
   "_comentario": "Catálogo ÚNICO de áreas y permisos. Cada función nueva añade aquí su área y sus permisos: aparecen solos en el editor de perfiles y en el menú. Los mismos identificadores se usan en la base de datos (RLS) y en la API Python (requiere_permiso). «de_puesto»: permiso para el trabajo propio (fichar, su camión, la flota…); solo pone su área en el menú si viene de los perfiles de la persona, no por ser superadministrador. Los demás son de gestión o dirección.",
   "areas": [
     {
+      "id": "transporte", "nombre": "Chóferes y vehículos", "ruta": "/transporte",
+      "descripcion": "Consulta en directo de los chóferes y vehículos de Odoo.",
+      "permisos": [
+        { "id": "transporte.ver", "nombre": "Consultar chóferes y vehículos de Odoo de todas las empresas configuradas (todos los centros)" }
+      ]
+    },
+    {
       "id": "direccion", "nombre": "Cuadro de mando", "ruta": "/direccion",
       "descripcion": "Métricas de toda la empresa: finanzas, centros, chóferes por zona, comercial y personas.",
       "permisos": [

@@ -84,3 +84,20 @@ Nadie tiene que decidir dónde va cada dato: `servicios/sincronizacion.py` tiene
   - `/api/odoo/comercial` (`direccion.ver`) añade las oportunidades ganadas y nuevas del mes anterior hasta el mismo día.
   - Todas aceptan `?empresa=<id>` (uno de `ODOO_COMPANY_IDS`; otro da error 400). Cada parte se calcula por separado: si falla o falta su aplicación, llega vacía con su aviso. Caché de 10 minutos (5 el comercial; 1 si algo falló). «Hoy» es el día de Madrid.
   - **Permisos de lectura** del usuario técnico de Odoo (en las dos empresas): facturas y apuntes (`account.move`, `account.move.line`), pedidos y sus líneas (`sale.order`, `sale.order.line`, de **todos** los comerciales, no «solo sus documentos»), cuentas y etiquetas analíticas (`account.analytic.account`, `account.analytic.tag`) y empresas (`res.company`). `scripts.comprobar_permisos` ya los comprueba. Escrito para Odoo 15: en producción (Odoo 18) ya no hay etiquetas analíticas y la analítica va en `analytic_distribution` (ver arriba).
+
+## Catálogo de chóferes y vehículos (16-11-2026)
+
+Autorizado por Félix ampliar el piloto a chóferes y flota y consultar el modo real.
+`/transporte` consulta `/api/flota/catalogo-odoo` al abrir la página, sin guardar copias en Supabase.
+Exige sesión real y el permiso global `transporte.ver` (todos los centros de las empresas configuradas),
+que se asigna desde Perfiles; no se concede automáticamente a perfiles existentes.
+
+- Vehículos activos: `fleet.vehicle`, matrícula, modelo, empresa y conductor asignado.
+- Chóferes activos: `res.partner` con `is_driver=true`, nombre y empresa. No son todos los empleados.
+- Solo empresas de `ODOO_COMPANY_IDS` y registros compartidos sin empresa. Estos últimos se indican expresamente.
+- Búsqueda por matrícula o nombre, hasta 100 resultados por lista y aviso si hay más.
+- La documentación y el reemplazo del flujo antiguo de asignaciones de «Mi camión» siguen pendientes.
+
+Conexión comprobada: la URL de `.env.local`, `https://www.grupotrimodos.com`, responde con Odoo 18.
+La dirección anterior `stinsa18.tecnativa.net` devolvió HTTP 503 en esta revisión.
+La comprobación fue por API real, sin escrituras; no se comparó con la pantalla de Odoo ni se usó un entorno de pruebas.
