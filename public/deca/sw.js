@@ -1,8 +1,8 @@
 // Service worker: solo guarda la "carcasa" de la app para que abra aunque no haya cobertura.
 // Solo atiende /deca/: los datos (/api/*) y el resto de la app general NUNCA se guardan en caché.
-const CACHE = "deca-v18"; // súbelo (v2, v3…) cuando cambies archivos de la carcasa
+const CACHE = "deca-v19"; // súbelo (v2, v3…) cuando cambies archivos de la carcasa
 const SHELL = [
-  "/deca/", "/deca/index.html", "/deca/guia.html", "/deca/styles.css", "/deca/app.js", "/deca/manifest.webmanifest",
+  "/deca/", "/deca/index.html", "/deca/guia.html", "/deca/cabecera.css", "/deca/styles.css", "/deca/cabecera.js", "/deca/app.js", "/deca/manifest.webmanifest",
   "/deca/vendor/jsQR.js", "/deca/icons/icon-192.png", "/deca/icons/icon-512.png", "/deca/icons/apple-touch-icon.png",
   "/deca/img/trimodos.png", "/deca/img/stinsa.png", "/deca/img/transargi.png", "/deca/fonts/atkinson-hyperlegible-next-latin-wght-normal.woff2",
 ];

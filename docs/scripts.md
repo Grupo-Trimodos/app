@@ -11,6 +11,7 @@ Se lanzan desde la carpeta del proyecto con el entorno de Python: `.venv/bin/pyt
 | `comprobar_permisos` | Comprueba qué puede y qué no puede hacer el usuario técnico de Odoo del entorno, sin escribir nada. | Al cambiar de usuario técnico o al pasar a Odoo real. |
 | `diagnostico` | Abre un pedido (p. ej. `S2621473`) como lo haría DECA, enseña lo que encuentra y lista los campos de etapa y estado de tareas y bultos. Necesita `ODOO_MODE=real`. | Para averiguar por qué un pedido no carga en DECA. |
 | `diagnostico_movildata` | La forma de cada respuesta de Movildata (tipo, cuántos y nombres de campos) y si la app la sabe leer. No enseña datos ni la clave. | Si Movildata cambia su formato o la flota sale vacía. |
+| `prueba_grupos_db` | Comprueba en un PostgreSQL local (Docker, `--contenedor trimodos-jornada-pruebas`) que cada persona solo lee y gestiona lo de su centro, zona y departamento, consultando la base directamente. | Al tocar permisos, centros, departamentos o las políticas de fichajes y ausencias. |
 | `comprobar_compatibilidad` | Comprueba, solo leyendo, si la app funcionaría con otra versión de Odoo (p. ej. la 18). Usa `ENV_FILE` para apuntar al entorno a probar. | Antes de actualizar Odoo. |
 
 `comprobar_compatibilidad` revisa también los campos habituales que usa el envío de fichajes y ausencias en

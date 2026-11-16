@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import BarraCarga from "./BarraCarga";
 import "./globals.css";
+import "../../public/deca/cabecera.css";   // cabecera y menú: la misma hoja que usa la PWA de DECA
 import "./shell.css";
 
 export const metadata: Metadata = {

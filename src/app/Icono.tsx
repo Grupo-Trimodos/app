@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
-const trazos: Record<string, ReactNode> = {
+/** Los dibujos. Los usa también /api/sesion/cabecera para dar a la PWA de DECA los mismos iconos. */
+export const trazos: Record<string, ReactNode> = {
   inicio: <><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z" /></>,
   flota: <><path d="M3 9V5h12v4M1 9h13v9H1zM14 12h4l4 4v2h-8M18 12v4h4" /><circle cx="5" cy="19" r="2" /><circle cx="18" cy="19" r="2" /></>,
   camion: <><path d="M2 5h12v13H2zM14 9h4l4 5v4h-8M17 9v5h5" /><circle cx="6" cy="18" r="2.5" /><circle cx="18" cy="18" r="2.5" /></>,
@@ -37,7 +38,4 @@ export default function Icono({ nombre, size = 22, className }: { nombre: string
   </svg>;
 }
 
-export const ICONOS_AREA: Record<string, string> = {
-  direccion: "actividad", flota: "flota", fichaje: "reloj", chofer: "camion", ausencias: "calendario", equipo: "equipo", deca: "documento", admin: "ajustes",
-  documentos: "documento", incidencias: "aviso", seguridad: "escudo", ropa: "ropa",
-};
+export { ICONOS_AREA } from "@/lib/navegacion";

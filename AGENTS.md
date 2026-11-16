@@ -43,6 +43,8 @@ cambiar una función.
    perfil; una página por función, filtrada por permisos y centro.
 6. **Fase actual: piloto de fichaje y vacaciones.** No añadir funciones nuevas; solo limpiar, arreglar y pulir. Lo demás
    queda oculto quitando el permiso en los perfiles, no borrando código.
+   Excepción autorizada por Félix el 16-11-2026: la organización por grupos de trabajo (centros, zonas, departamentos y
+   tipos de transporte; `docs/acceso-y-perfiles.md`).
 
 ## Stack
 - Web: Next.js 16 (App Router, `src/`), TypeScript, CSS propio (`src/app/globals.css`, `src/app/shell.css`). Next 16 usa
@@ -50,7 +52,8 @@ cambiar una función.
 - Login y datos propios: Supabase (`@supabase/ssr`). Permisos en la base de datos con RLS (`supabase/migrations/`).
 - API Python (FastAPI) en `servicios/`, publicada en Vercel con `api/index.py`: DECA, ARGON, fichajes y ausencias hacia
   Odoo, Movildata y finanzas de Odoo. Rutas `/api/deca|argon|rrhh|chofer|flota|odoo/*` (rewrites en `next.config.ts`).
-- PWA de DECA: `public/deca/` (HTML/JS sin framework, funciona sin cobertura).
+- PWA de DECA: `public/deca/` (HTML/JS sin framework, funciona sin cobertura). Lleva la cabecera y el menú de la app
+  (`public/deca/cabecera.css`, que también importa la web, y `cabecera.js`; `docs/deca.md`).
 
 ## Reglas
 - Todo texto visible, en **español**, claro y no técnico. Botones grandes; pensado para móvil y cabina.
@@ -68,6 +71,40 @@ cambiar una función.
   **`DRY_RUN=true` por defecto**; producción v15 solo con el pedido S2621473 y permiso expreso.
 - Al cambiar `public/deca/*`, subir la versión de `CACHE` en `public/deca/sw.js`.
 - **Preguntar antes de `git push`** (el push despliega en Vercel).
+
+## Cambios que afectan a una integración con Odoo
+
+Que Odoo no devuelva un error no demuestra que el dato esté bien. Estas normas se cumplen todas, sin excepción, y un
+cambio que no las cumpla no se entrega.
+
+**Cuándo se aplican:** al tocar `servicios/odoo_client.py`, `servicios/sincronizacion.py`, `servicios/rrhh.py`,
+`servicios/argon/` o lo que DECA escribe; al cambiar una tabla o columna de Supabase de la que sale un envío (fichajes,
+ausencias); al cambiar una variable `ODOO_*`, `DRY_RUN` o `RRHH_DRY_RUN`; y cuando cambia el propio Odoo (versión,
+dirección, usuario técnico, aplicaciones instaladas, tipos de ausencia).
+
+1. **Antes de tocar, decir qué alcanza:** qué dato, qué modelo y campos de Odoo, quién lo provoca y qué registros que
+   ya existen podrían verse afectados.
+2. **Nunca se estrena en producción.** Se prueba primero en el Odoo de pruebas (`ENV_FILE=.env.pruebas`). Si no hay
+   Odoo de pruebas disponible, el cambio se para y se avisa a Félix.
+3. **Se lee de vuelta lo escrito.** Por cada escritura afectada se envía un caso en pruebas, se vuelve a leer el
+   registro en Odoo y se compara campo a campo con lo guardado en la app: empleado, empresa, fecha y hora (Odoo guarda
+   en UTC; la app enseña la hora de Madrid), tipo de ausencia y días, mercancía, bultos, palets y peso.
+4. **Casos mínimos por dato:**
+   - Fichajes: entrada y salida; con pausa; una jornada que cruza la medianoche; una persona de cada empresa.
+   - Ausencias: de un día y de varios; un tipo de cada clase que use la app.
+   - DECA: un bulto con sus cuatro campos y la nota.
+   - Siempre: enviar dos veces el mismo registro no lo duplica en Odoo.
+5. **Las lecturas también se comprueban.** Si cambia un campo, un filtro o la empresa de una lectura, la cifra de la
+   app se compara con la misma cifra en la pantalla de Odoo, al menos un caso por empresa.
+6. **Pruebas automáticas:** `pytest` completo, `scripts.comprobar_compatibilidad` y `scripts.comprobar_permisos`
+   contra el Odoo de pruebas. Un fallo no se arregla cambiando la prueba.
+7. **Paso a producción, solo con permiso expreso de Félix para ese cambio.** Primero un único registro real; se lee de
+   vuelta en Odoo y, si coincide, sale el resto. Los interruptores `DRY_RUN` y `RRHH_DRY_RUN` no se cambian sin ese
+   permiso.
+8. **La entrega dice qué se comprobó:** los casos probados, los ids de los registros de Odoo leídos de vuelta y lo que
+   no se pudo comprobar. Lo que no se pudo comprobar se dice; nunca se da por bueno.
+9. **Si un dato ha llegado mal:** se paran los envíos de ese dato (su interruptor a `true`), se avisa a Félix con la
+   lista de registros afectados y se corrige en Odoo. Desde la app no se corrige ni se borra nada.
 
 ## Comprobar antes de entregar
 ```bash

@@ -643,8 +643,8 @@ def test_la_pagina_tiene_titulo_y_vista_previa_para_compartir():
     from pathlib import Path
     root = Path(__file__).resolve().parent.parent / "public" / "deca"
     html = (root / "index.html").read_text(encoding="utf-8")
-    assert "<title>Modificación DECA - Trimodos</title>" in html
-    assert 'property="og:title" content="Modificación DECA - Trimodos"' in html
+    assert "<title>Órdenes de transporte · Grupo Trimodos</title>" in html
+    assert 'property="og:title" content="Órdenes de transporte · Grupo Trimodos"' in html
     assert 'property="og:image" content="https://' in html          # absoluta: WhatsApp/Teams no resuelven rutas relativas
     assert (root / "img" / "compartir.png").exists()
 
@@ -724,7 +724,7 @@ def test_la_guia_de_la_app_se_genera_desde_el_markdown_y_no_esta_desfasada():
     from scripts.generar_guia import generar
     actual = (Path(__file__).resolve().parent.parent / "public" / "deca" / "guia.html").read_text(encoding="utf-8")
     assert actual.replace("\r\n", "\n") == generar().replace("\r\n", "\n"), "guia.html desfasada: ejecuta scripts.generar_guia"
-    assert "Cómo corregir la orden de transporte" in actual and "Volver a la app" in actual
+    assert "Cómo corregir la orden de transporte" in actual and "Volver a las órdenes" in actual
 
 
 def test_el_menu_enlaza_a_la_guia_y_se_guarda_para_uso_sin_conexion():

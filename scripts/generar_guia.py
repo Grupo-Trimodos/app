@@ -1,4 +1,4 @@
-"""Genera public/guia.html (la guía dentro de la app) a partir de GUIA_CONDUCTORES.md.
+"""Genera public/deca/guia.html (la guía dentro de la app) a partir de GUIA_CONDUCTORES.md.
 
 La fuente es SIEMPRE el .md: edítalo y vuelve a ejecutar
     .\\.venv\\Scripts\\python.exe -X utf8 -m scripts.generar_guia
@@ -17,23 +17,27 @@ PLANTILLA = """<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#142535" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#152636" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <meta name="robots" content="noindex, nofollow">
-<title>Guía de uso - DECA Trimodos</title>
+<title>Guía de las órdenes de transporte · Grupo Trimodos</title>
 <link rel="manifest" href="/deca/manifest.webmanifest">
 <link rel="icon" type="image/png" href="/deca/favicon.png">
 <link rel="apple-touch-icon" href="/deca/icons/apple-touch-icon.png">
+<link rel="stylesheet" href="/deca/cabecera.css">
 <link rel="stylesheet" href="/deca/styles.css">
 </head>
 <body data-screen="guia">
 <!-- Archivo GENERADO por scripts/generar_guia.py desde GUIA_CONDUCTORES.md: no lo edites a mano. -->
-<header class="brandbar"><a href="/deca/"><img src="/deca/img/trimodos.png" alt="Grupo Trimodos"></a></header>
+<div id="cabecera"></div>
+<div id="pagina">
 <main class="screen guia">
-<a class="btn primary" href="/deca/">Volver a la app</a>
+<a class="btn primary" href="/deca/">Volver a las órdenes</a>
 {contenido}
-<a class="btn primary" href="/deca/">Volver a la app</a>
+<a class="btn primary" href="/deca/">Volver a las órdenes</a>
 </main>
+</div>
+<script src="/deca/cabecera.js"></script>
 </body>
 </html>
 """

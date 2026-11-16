@@ -45,7 +45,10 @@ ARGON tiene su propia lista, congelada (`docs/argon.md`). Borrar (`unlink`), nun
    queda como «simulado» y no se reenvía al apagarlo. En producción: `RRHH_DRY_RUN=false` (autorizado por Félix el
    5-11-2026) y `DRY_RUN=true`.
 6. **A la vista:** cada registro enseña si está en Odoo, y los errores salen en Administración → Sincronización.
-7. **Escritura nueva:** se propone a Félix con el modelo, los campos, quién la provoca, cuándo, cómo se ve si falla y cómo
+7. **Todo cambio se comprueba leyendo de vuelta:** antes de entregar un cambio que afecte a una integración se prueba en
+   el Odoo de pruebas y se compara campo a campo lo escrito con lo guardado en la app. Normas completas en `AGENTS.md`,
+   «Cambios que afectan a una integración con Odoo».
+8. **Escritura nueva:** se propone a Félix con el modelo, los campos, quién la provoca, cuándo, cómo se ve si falla y cómo
    se deshace en Odoo. Solo con su permiso expreso se añade a `ESCRITURAS`, a su mapa y a la prueba.
 
 ## Sincronización automática

@@ -12,6 +12,30 @@
 5. **RLS**: aunque alguien manipule la web, la base de datos solo deja hacer lo que permiten sus perfiles.
 6. **DECA**: sus pantallas piden el token a `/api/sesion/token` y lo mandan a la API Python (`Authorization: Bearer`). La API lo valida con Supabase y exige usuario **activo** con el permiso **`deca.usar`**. El **nombre del conductor queda en la nota** de la tarea de Odoo.
 
+## Grupos de trabajo (estructura preparada, sin sincronizar todavía)
+
+Migración `20261116000000_grupos_de_trabajo.sql`. Cada ficha responde a cuatro preguntas y Odoo manda en las cuatro; la
+app no las cambia en Odoo. La sincronización desde Odoo está por hacer: hoy las tablas existen y se rellenan a mano.
+
+| Pregunta | En Odoo | En la app |
+|---|---|---|
+| ¿Dónde? | Ubicación de trabajo | `centros`, con `tipo`: **centro** (oficina y almacén) o **zona** (chóferes, que no tienen centro) |
+| ¿En qué área? | Departamento | `departamentos` (un solo nivel) y `usuarios.departamento_id` |
+| ¿Qué hace? (chóferes) | Puesto de trabajo | `tipos_transporte` y `usuarios.tipo_transporte_id` |
+| ¿Quién es su responsable? | Gerente / responsable del departamento | `centros.responsable_id`, `departamentos.responsable_id` |
+
+- **Pertenencia:** sigue en `usuario_perfil` (una persona puede estar en varios centros o zonas). `origen` dice si la
+  fila la puso la sincronización (`odoo`) o la administración (`manual`, para excepciones y equipos temporales).
+- **Quién ve a quién:** como antes, quien tiene un perfil con el permiso en un centro o zona lo ejerce sobre las personas
+  de ese centro o zona. Si la fila lleva `departamento_id`, solo sobre las de ese departamento dentro del centro. Un
+  límite por persona, perfil y centro: quien lleve dos departamentos del mismo centro lleva el centro entero.
+- **El responsable** de `centros` y `departamentos` es informativo (quién es). Lo que le deja ver y aprobar es su perfil
+  Responsable en ese centro; la sincronización se lo pondrá a quien diga Odoo.
+- **Rendimiento:** la lectura de `fichajes` y `ausencias` usa `privado.personas_a_cargo(permiso)`, que calcula la lista
+  de personas una vez por consulta. `privado.puedo_sobre` sigue igual para el resto.
+- **No confundir** con `zonas` y `chofer_zona` (chóferes por cliente o ruta), ocultas en el piloto.
+- **Pruebas:** `scripts.prueba_grupos_db` (PostgreSQL local en Docker).
+
 ## Perfiles y pantallas
 
 - **Cuatro perfiles básicos, que no se borran ni cambian de nombre** (`perfiles.base`, lo impide la base de datos): **Administrador**, **Oficina**, **Chófer** y **Operario**. Cada persona tiene **un puesto en su centro**. Encima se le suman **complementos**: **Responsable**, que aprueba lo de su centro, y **Seguridad**, que vale en todos los centros. Los permisos de cada perfil se siguen editando con casillas.

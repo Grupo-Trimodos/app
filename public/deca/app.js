@@ -2,7 +2,8 @@
 // App de conductores: 4 pantallas (menú, escáner, edición, resumen/resultado). Sin dependencias.
 
 const $ = (id) => document.getElementById(id);
-const LOGOS = { trimodos: "/deca/img/trimodos.png", stinsa: "/deca/img/stinsa.png", transargi: "/deca/img/transargi.png" };
+const LOGOS = { stinsa: "/deca/img/stinsa.png", transargi: "/deca/img/transargi.png" };
+const EMPRESAS = { stinsa: "STINSA", transargi: "TRANSARGI" };
 const COMPANY_BY_ID = { 1: "stinsa", 7: "transargi" };
 const PENDING = { pending: true };   // ha escrito en Mercancía pero aún no ha elegido de la lista
 const state = { data: null, edits: {}, lastReq: null, company: null, pdfUrl: null, pdfBlob: null, pdfLoading: null, health: {} };
@@ -80,15 +81,16 @@ const post = (path, data) => api(path, { method: "POST", headers: { "Content-Typ
 // Cada pantalla es una entrada del historial: el botón Atrás de Android vuelve a la pantalla anterior
 // en vez de cerrar la app.
 let currentScreen = "menu";
-// Marca: el color de acento y el logo de la franja dependen de la empresa de la orden.
+// Marca: el color de acento depende de la empresa de la orden, y su logo acompaña al título mientras se edita o revisa.
 function setBrand(company, screen) {
   if (company !== undefined) { if (company) document.body.dataset.company = company; else delete document.body.dataset.company; }
   document.body.dataset.screen = screen;
   const co = document.body.dataset.company;
-  const usaEmpresa = co && (screen === "edit" || screen === "review");
-  const key = usaEmpresa ? co : "trimodos";
-  $("brand-logo").src = LOGOS[key];
-  $("brand-logo").alt = { trimodos: "Grupo Trimodos", stinsa: "STINSA", transargi: "TRANSARGI" }[key];
+  for (const id of ["brand-logo", "brand-logo-2"]) {
+    const img = $(id);
+    img.hidden = !co;
+    if (co) { img.src = LOGOS[co]; img.alt = EMPRESAS[co]; }
+  }
 }
 function show(name) {
   clearError();
@@ -99,12 +101,16 @@ function show(name) {
   if (name === "scan") startScan();
   window.scrollTo({ top: 0 });
 }
+// En el menú no queda nada de la orden anterior: ni sus datos, ni la empresa elegida, ni su color.
+function limpiarOrden() {
+  state.data = null; state.edits = {}; pending = null; state.company = null;
+  for (const x of document.querySelectorAll(".seg-btn")) x.setAttribute("aria-checked", "false");
+  setBrand(null, "menu");
+}
 function go(name) {
   if (name === currentScreen) return show(name);
   if (name === "menu") {                      // volver al menú: se limpia la orden y el historial
-    state.data = null; state.edits = {}; pending = null; state.company = null;
-    for (const x of document.querySelectorAll(".seg-btn")) x.setAttribute("aria-checked", "false");
-    setBrand(null, "menu");
+    limpiarOrden();
     history.replaceState({ s: "menu" }, "");
     return show("menu");
   }
@@ -117,10 +123,11 @@ window.addEventListener("popstate", (e) => {
   if (target === "review" && !pending) target = "edit";
   if (!$("confirm").hidden) $("confirm").hidden = true;
   if (!$("mma").hidden) $("mma").hidden = true;
+  if (target === "menu") limpiarOrden();   // también con el botón Atrás del móvil
   show(target);
 });
 history.replaceState({ s: "menu" }, "");
-setBrand(null, "menu");   // la franja arranca ya con el tamaño del menú
+setBrand(null, "menu");
 document.addEventListener("click", (e) => {
   const b = e.target.closest("[data-go]");
   if (b) go(b.dataset.go);

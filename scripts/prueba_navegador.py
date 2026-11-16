@@ -88,9 +88,14 @@ def main():
 
             print("Menú")
             pg.goto(BASE); pg.wait_for_selector("#modo:not([hidden])")
-            titulo = pg.evaluate("() => { const h = document.querySelector('#s-menu h1'); const r = h.getBoundingClientRect(); return [h.textContent, getComputedStyle(h).textAlign, (r.left + r.right) / 2, window.innerWidth / 2]; }")
-            comprobar(titulo[0] == "DECA - Trimodos", f"el título del menú es «{titulo[0]}»")
-            comprobar(titulo[1] == "center" and abs(titulo[2] - titulo[3]) < 2, f"está centrado (centro del título {titulo[2]:.0f}px, centro de la pantalla {titulo[3]:.0f}px)")
+            titulo = pg.evaluate("() => { const h = document.querySelector('#s-menu h1'); return [h.textContent, getComputedStyle(h).textAlign, document.title]; }")
+            comprobar(titulo[0] == "Órdenes de transporte" and "Grupo Trimodos" in titulo[2], f"el título es el de la app: «{titulo[0]}» («{titulo[2]}»)")
+            comprobar(titulo[1] in ("start", "left"), "el título va a la izquierda, como en el resto de pantallas")
+            pg.wait_for_selector("#cabecera .campo-cabecera .shell-avatar")
+            cab = pg.evaluate("() => { const c = document.querySelector('#cabecera .campo-cabecera'); const e = getComputedStyle(c); return [c.querySelector('.campo-volver').getAttribute('href'), c.querySelector('.campo-volver').textContent, c.querySelector('.shell-avatar').textContent, c.querySelector('form').getAttribute('action'), e.height, c.querySelector('.shell-avisos').getAttribute('href')]; }")
+            comprobar(cab[:4] == ["/", "Inicio", "UP", "/salir"] and cab[5] == "/pendientes", f"lleva la cabecera de la app: «Inicio», avisos, cuenta y «Salir» ({cab})")
+            comprobar(cab[4] == "64px", f"la cabecera mide lo mismo que en la app ({cab[4]})")
+            comprobar(pg.locator(".brandbar, #btn-inicio").count() == 0, "ya no tiene barra ni botón de volver propios")
             pg.screenshot(path=str(SALIDA / "p4_menu.png"))
 
             print("Sesión de la app general")
@@ -110,6 +115,9 @@ def main():
             pg.wait_for_selector("#s-edit:not([hidden])", timeout=20000)
             comprobar("S2621473" in pg.inner_text("#edit-title"), "el QR se lee con la cámara y abre el pedido S2621473")
             comprobar(pg.is_hidden("#edit-banners .banner.info"), "QR verificado: sin aviso de «sin QR»")
+            emp = pg.evaluate("() => { const i = document.getElementById('brand-logo'); const e = getComputedStyle(i); const h = document.getElementById('edit-title').getBoundingClientRect(); return [i.alt, i.naturalWidth / i.naturalHeight, parseFloat(e.width) / parseFloat(e.height), h.height, document.documentElement.scrollWidth]; }")
+            comprobar(emp[0] == "TRANSARGI" and abs(emp[1] - emp[2]) < 0.05, f"el título de la orden lleva el logo de su empresa, sin deformar ({emp[0]})")
+            comprobar(emp[3] < 45 and emp[4] <= 390, f"el número de pedido cabe en una línea en el móvil (alto del título {emp[3]:.0f}px)")
             pg.screenshot(path=str(SALIDA / "p4_edicion.png"))
 
             print("Botón Atrás")
@@ -119,8 +127,9 @@ def main():
             pg.go_back()
             pg.wait_for_selector("#s-menu:not([hidden])", timeout=5000)
             comprobar(True, "Atrás desde el escáner vuelve al menú")
-            logo = pg.evaluate("() => { const i = document.getElementById('brand-logo'); const r = i.getBoundingClientRect(); return [i.naturalWidth / i.naturalHeight, r.width / r.height]; }")
-            comprobar(abs(logo[0] - logo[1]) < 0.02, f"el logo conserva su proporción al volver al menú (logo {logo[0]:.3f}, dibujado {logo[1]:.3f})")
+            logo = pg.evaluate("() => { const i = document.querySelector('#cabecera .campo-logo img'); const r = i.getBoundingClientRect(); return [i.naturalWidth / i.naturalHeight, r.width / r.height]; }")
+            comprobar(abs(logo[0] - logo[1]) < 0.02, f"el logo de la cabecera conserva su proporción (logo {logo[0]:.3f}, dibujado {logo[1]:.3f})")
+            comprobar(pg.is_hidden("#brand-logo") and pg.evaluate("document.body.dataset.company") is None, "al volver al menú ya no se ve el logo ni el color de la empresa de la orden")
 
             print("Orden sin bultos (como las de contenedor)")
             ctx2 = navegador.new_context(viewport={"width": 390, "height": 844})            # sin cámara: no se lee ningún QR solo
@@ -233,7 +242,7 @@ def main():
             comprobar(pg.evaluate("document.documentElement.scrollWidth") <= 390, "la guía cabe en el móvil sin scroll horizontal")
             pg.screenshot(path=str(SALIDA / "p4_guia.png"), full_page=True)
             pg.click("a.btn >> nth=0"); pg.wait_for_selector("#btn-scan")
-            comprobar(pg.is_visible("#btn-scan"), "«Volver a la app» devuelve al menú")
+            comprobar(pg.is_visible("#btn-scan"), "«Volver a las órdenes» devuelve al menú")
             ctx.set_offline(True)
             pg.reload()
             pg.wait_for_selector("#btn-scan")

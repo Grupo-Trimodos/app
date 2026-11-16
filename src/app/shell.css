@@ -1,38 +1,10 @@
-/* Navegación común: la misma estructura en oficina y en cabina. */
-.app-shell { --shell-ancho: 232px; }
+/* Navegación común: la cabecera y el menú están en public/deca/cabecera.css (los comparte la PWA de DECA). */
 /* Barra de carga (BarraCarga.tsx): sale al pulsar, avanza mientras el servidor prepara la página y se desvanece al llegar. */
 .barra-carga { position: fixed; inset: 0 0 auto 0; z-index: 200; height: 3px; background: #fcda00; box-shadow: 0 1px 4px #fcda0099; transform: scaleX(0); transform-origin: left; opacity: 0; pointer-events: none; transition: opacity .3s ease; }
 .barra-carga.cargando { opacity: 1; transition: none; animation: barra-carga 10s cubic-bezier(.05, .75, .2, 1) forwards; }
 .barra-carga.fin { transform: scaleX(1); }
 @keyframes barra-carga { from { transform: scaleX(0); } to { transform: scaleX(.92); } }
 form.enviando button { pointer-events: none; opacity: .65; }
-.shell-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 35; width: 232px; background: #142535; color: #d8e0e8; display: flex; flex-direction: column; padding: 27px 16px 22px; }
-.shell-logo { display: flex; align-items: center; justify-content: center; background: white; min-height: 63px; border-radius: 7px; padding: 12px 15px; margin: 0 4px 36px; }
-.shell-logo img { display: block; width: 100%; height: auto; max-height: 44px; object-fit: contain; }
-.shell-nav-label { color: #8da1b4; font-size: 10px; letter-spacing: .16em; font-weight: 700; margin: 0 14px 14px; }
-.shell-nav { display: flex; flex-direction: column; gap: 5px; }
-.shell-nav-link { display: flex; align-items: center; gap: 12px; min-height: 49px; padding: 12px 14px; border-radius: 8px; color: #bfccd8; text-decoration: none; font-size: 14px; font-weight: 600; transition: background .15s, color .15s; }
-.shell-nav-link:hover { background: #213748; color: white; }
-.shell-nav-link.activo { background: #fcda00; color: #162635; box-shadow: 0 3px 12px #0000000b; }
-.shell-nav-link:focus-visible, .shell-logo:focus-visible { outline-color: #fcda00; }
-.shell-sidebar-footer { display: flex; flex-direction: column; gap: 9px; margin: auto 13px 0; padding-top: 38px; }
-.shell-brand-line { display: inline-block; width: 28px; height: 3px; background: #fcda00; border-radius: 2px; flex-shrink: 0; }
-.shell-sidebar-footer strong { color: #dce5ed; font-size: 12px; font-weight: 600; }
-.shell-sidebar-footer > span:last-child { color: #8da1b4; font-size: 11px; max-width: 145px; line-height: 1.65; }
-.shell-header { height: 80px; margin-left: 232px; padding: 0 36px; border-bottom: 1px solid #e3e8ed; display: flex; align-items: center; justify-content: space-between; background: white; gap: 20px; }
-.shell-heading { display: flex; align-items: center; gap: 10px; color: #617082; font-size: 13px; }
-.shell-heading svg { color: #8799ab; }
-.shell-user { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.shell-avatar { height: 35px; width: 35px; border-radius: 50%; background: #eaf0f5; color: #33536c; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; }
-.shell-user-name { font-size: 13px; font-weight: 600; max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.shell-logout { display: flex; align-items: center; gap: 8px; border: 0; border-left: 1px solid #e2e8ee; margin-left: 5px; padding: 10px 0 10px 19px; min-height: 44px; color: #617082; background: none; cursor: pointer; font-size: 13px; }
-.shell-logout:hover { color: #182737; }
-.shell-avisos { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-left: auto; border-radius: 10px; color: #617082; flex-shrink: 0; }
-.shell-avisos:hover { background: #f0f3f6; color: #182737; }
-.shell-avisos.con-avisos { color: #182737; }
-.shell-avisos-cuenta { position: absolute; top: 4px; right: 2px; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 10px; background: #fcda00; color: #182330; font-size: 11px; font-weight: 800; line-height: 19px; text-align: center; box-shadow: 0 0 0 2px white; }
-.shell-skip { position: fixed; top: -80px; left: 248px; z-index: 100; background: #fcda00; color: #142535; border-radius: 7px; padding: 12px 18px; font-weight: 700; }
-.shell-skip:focus { top: 16px; }
 .app-shell ~ .contenido { width: calc(100% - 232px); max-width: 1520px; margin-left: calc(232px + max(0px, (100% - 1752px) / 2)); margin-right: 0; }
 .app-shell ~ .contenido.estrecho { max-width: 640px; margin-left: calc(232px + max(0px, (100% - 872px) / 2)); }
 
@@ -166,19 +138,6 @@ a.inicio-kpi:hover { border-color: #8fa5b9; box-shadow: 0 7px 21px #18273709; }
   .login-promesas { gap: 18px; }
 }
 @media (max-width: 900px) {
-  .shell-sidebar { position: relative; inset: auto; width: 100%; padding: 15px 18px 0; flex-direction: row; flex-wrap: wrap; align-items: center; }
-  .shell-logo { width: 137px; min-height: 43px; padding: 7px 10px; margin: 0 0 13px; border-radius: 5px; }
-  .shell-nav-label { margin: 0 0 13px auto; font-size: 9px; }
-  .shell-nav { width: calc(100% + 36px); flex: 0 0 calc(100% + 36px); margin: 0 -18px; padding: 0 13px 10px; flex-direction: row; overflow-x: auto; scrollbar-width: thin; scrollbar-color: #426178 transparent; }
-  .shell-nav-link { gap: 8px; flex-shrink: 0; font-size: 12px; min-height: 44px; padding: 10px 13px; }
-  .shell-nav-link svg { width: 18px; height: 18px; }
-  .shell-sidebar-footer { display: none; }
-  .shell-header { margin-left: 0; height: 60px; padding: 0 22px; }
-  .shell-heading { font-size: 12px; }
-  .shell-user-name { font-size: 12px; max-width: 160px; }
-  .shell-avatar { width: 30px; height: 30px; font-size: 10px; }
-  .shell-logout { padding-left: 13px; font-size: 12px; }
-  .shell-skip { left: 18px; }
   .app-shell ~ .contenido, .app-shell ~ .contenido.estrecho { margin: 0 auto; width: 100%; }
   .app-shell ~ .contenido.estrecho { max-width: 640px; }
   .inicio-bienvenida { flex-direction: row; align-items: center; }
@@ -232,11 +191,6 @@ a.inicio-kpi:hover { border-color: #8fa5b9; box-shadow: 0 7px 21px #18273709; }
   .login-acceso > .lead { margin-bottom: 27px; }
 }
 @media (max-width: 430px) {
-  .shell-header { padding: 0 18px; gap: 10px; }
-  .shell-heading span { display: none; }
-  .shell-user { gap: 8px; }
-  .shell-user-name { max-width: 180px; }
-  .shell-logout { margin-left: 2px; }
   .inicio-modulos { grid-template-columns: 1fr; }
   .inicio-modulo { padding: 21px; min-height: 0; }
   .inicio-modulo-top { flex-wrap: nowrap; }
@@ -346,18 +300,6 @@ details > summary { cursor: pointer; }
 .paginas { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 16px; font-size: 14px; color: var(--suave); }
 
 /* ================= App del móvil (chóferes y operarios): sin menú ================= */
-.campo-cabecera { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 10px; height: 64px; padding: 0 16px;
-  background: white; border-bottom: 1px solid #e3e8ed; }
-.campo-logo { display: flex; align-items: center; flex-shrink: 0; }
-.campo-logo img { display: block; height: 30px; width: auto; }
-.campo-volver { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; margin-left: 4px; border-radius: 10px;
-  background: #eef3f7; color: #182737; font-weight: 700; font-size: 14px; text-decoration: none; }
-.campo-volver svg { transform: rotate(180deg); }
-.campo-hueco { flex: 0; }
-.campo-cabecera .shell-avisos { margin-left: auto; }
-.campo-cabecera .shell-user-name { display: none; }
-.campo-cabecera .shell-logout span { display: none; }
-.campo-cabecera .shell-logout { padding-left: 12px; }
 .app-shell.campo ~ .contenido { width: 100%; max-width: 600px; margin: 0 auto; padding: 20px 16px 48px; }
 .app-shell.campo ~ .contenido:not(.campo-contenido) { max-width: 680px; }
 .campo { display: grid; gap: 16px; }

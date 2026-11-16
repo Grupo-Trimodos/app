@@ -7,7 +7,9 @@
        url("/deca/fonts/atkinson-hyperlegible-next-latin-wght-normal.woff2") format("woff2");
 }
 
-/* Colores de la app (fondo claro, barra azul marino, amarillo Grupo Trimodos). Con el móvil en modo oscuro (cabina de
+/* DECA es una pantalla más de la app: lleva su cabecera y su menú (/deca/cabecera.css y /deca/cabecera.js) y sus mismos
+   colores, letra y formas (src/app/globals.css). Aquí solo está lo propio de DECA, con tamaños pensados para la cabina.
+   Colores de la app (fondo claro, azul marino, amarillo Grupo Trimodos). Con el móvil en modo oscuro (cabina de
    noche) se pasa a negro puro: ver más abajo. El color de la empresa marca solo lo importante: la raya de la barra, el
    botón principal, lo que se ha cambiado y el visor. --brand es el color de fondo; --brand-ink, el mismo tono legible
    como texto sobre blanco. Todos los textos superan 4,5:1 de contraste y los bordes de los campos 3:1. */
@@ -16,13 +18,12 @@
   --bg: #f4f5f7; --surface: #fff; --surface-2: #fff; --surface-hover: #f0f3f6; --input: #fff;
   --line: #dde3e9; --line-strong: #7f8e9d; --line-ghost: #ccd5df;   /* fina: separa; fuerte: borde de lo que se toca */
   --fg: #182737; --muted: #5b6b7c;
-  --bar: #142535;                                                  /* barra superior: la misma que el menú de la app */
-  --brand: #fcda00; --on-brand: #182330; --brand-ink: #6e5600; --brand-tint: #fff6c2;   /* amarillo Grupo Trimodos */
+    --brand: #fcda00; --on-brand: #182330; --brand-ink: #6e5600; --brand-tint: #fff6c2;   /* amarillo Grupo Trimodos */
   --warn: #8a5a00; --warn-bg: #fff6dc; --ok: #16734f; --on-ok: #fff; --ok-bg: #e3f4ec;
   --bad: #b52b3b; --bad-bg: #fff0f1; --info: #2d6da3; --info-bg: #eef5fb;
   --overlay: rgba(20, 37, 53, .58); --sombra: 0 4px 22px #1827370a;
   --tap: 60px; --tap-big: 68px; --field: 56px;       /* alturas pensadas para el dedo (con guantes) */
-  --gutter: 18px; --r-sm: 12px; --r: 14px; --r-lg: 16px;
+  --gutter: 16px; --r-sm: 10px; --r: 10px; --r-lg: 16px;   /* los mismos radios que la app: botones y avisos 10, paneles 16 */
 }
 body[data-company="stinsa"]    { --brand: #009f92; --on-brand: #000; --brand-ink: #00695f; --brand-tint: #e2f4f2; }   /* verde STINSA */
 body[data-company="transargi"] { --brand: #f17e49; --on-brand: #000; --brand-ink: #a8461a; --brand-tint: #fdece3; }   /* naranja TRANSARGI */
@@ -32,7 +33,7 @@ body[data-company="transargi"] { --brand: #f17e49; --on-brand: #000; --brand-ink
   :root {
     --bg: #000; --surface: #131313; --surface-2: #1d1d1d; --surface-hover: #282828; --input: #000;
     --line: #2e2e2e; --line-strong: #626262; --line-ghost: #3d3d3d;
-    --fg: #fff; --muted: #ababab; --bar: #0b1520;
+    --fg: #fff; --muted: #ababab;
     --brand: #fcda00; --on-brand: #000; --brand-ink: #fcda00; --brand-tint: #1f1a00;
     --warn: #ffd400; --warn-bg: #1f1a00; --ok: #00e060; --on-ok: #000; --ok-bg: rgba(0, 224, 96, .14);
     --bad: #ff5a5a; --bad-bg: #250808; --info: #5cc8ff; --info-bg: #04161f;
@@ -40,6 +41,16 @@ body[data-company="transargi"] { --brand: #f17e49; --on-brand: #000; --brand-ink
   }
   body[data-company="stinsa"]    { --brand-ink: #009f92; --brand-tint: #001f1c; }
   body[data-company="transargi"] { --brand-ink: #f17e49; --brand-tint: #261108; }
+  /* La cabecera de la app, de noche (el resto de la app no tiene modo oscuro: estos colores son solo de DECA). */
+  .campo-cabecera, .shell-header { background: #0b1520; border-bottom-color: #1e2a36; color: #fff; }
+  .campo-logo { background: #fff; padding: 6px 9px; border-radius: 7px; }
+  .campo-logo img { height: 24px; }
+  .campo-volver { background: #1b2a38; color: #fff; }
+  .shell-heading, .shell-heading svg, .shell-avisos, .shell-logout { color: #ababab; }
+  .shell-avisos.con-avisos, .shell-avisos:hover, .shell-logout:hover { color: #fff; }
+  .shell-avisos:hover { background: #1b2a38; }
+  .shell-avatar { background: #1b2a38; color: #cfe0ee; }
+  .shell-logout { border-left-color: #2e2e2e; }
 }
 
 * { box-sizing: border-box; }
@@ -54,10 +65,17 @@ body {
 [hidden] { display: none !important; }
 button, input { font: inherit; color: inherit; }
 
-/* Cada pantalla ocupa el alto que queda bajo la barra (sin scroll en el menú). */
-.screen { flex: 1 0 auto; width: 100%; max-width: 560px; margin: 0 auto; padding: 22px var(--gutter) 32px; display: flex; flex-direction: column; gap: 16px; }
+/* El contenido va bajo la cabecera de la app; con el menú lateral (oficina, pantalla ancha), a su derecha. */
+#pagina { flex: 1 0 auto; display: flex; flex-direction: column; min-width: 0; }
+@media (min-width: 901px) { body[data-shell="oficina"] #pagina { margin-left: 232px; } }
+/* Cada pantalla ocupa el alto que queda bajo la cabecera. */
+.screen { flex: 1 0 auto; width: 100%; max-width: 600px; margin: 0 auto; padding: 20px var(--gutter) 48px; display: flex; flex-direction: column; gap: 16px; }
 /* Escala: 15 · 18 · 20 · 28 px. Títulos un punto más apretados (como en la app); sin palabras sueltas en la 2.ª línea. */
-h1 { font-size: 1.55rem; line-height: 1.15; font-weight: 800; letter-spacing: -.025em; margin: 0; text-wrap: balance; }
+h1 { font-size: 1.55rem; line-height: 1.2; font-weight: 800; letter-spacing: -.025em; margin: 0; text-wrap: balance; }
+.lead { color: var(--muted); margin: -6px 0 4px; max-width: 46ch; }
+/* Título de la orden con el logo de su empresa a la derecha. */
+.titulo-orden { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.empresa { height: 18px; width: auto; max-width: 30vw; object-fit: contain; flex-shrink: 0; background: #fff; padding: 5px 8px; border-radius: 7px; border: 1px solid var(--line); box-sizing: content-box; }
 h2 { font-size: 1.12rem; line-height: 1.25; font-weight: 700; margin: 0; text-wrap: balance; }
 .hint { color: var(--muted); font-size: .94rem; margin: 0; }
 .num, input[inputmode=numeric], input[inputmode=decimal] { font-variant-numeric: tabular-nums; }
@@ -66,7 +84,7 @@ h2 { font-size: 1.12rem; line-height: 1.25; font-weight: 700; margin: 0; text-wr
 /* Principal: color de la empresa. Secundario: blanco con borde. Ghost: solo borde suave (volver, cancelar). */
 .btn {
   min-height: var(--tap); width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-  border-radius: var(--r); border: 1.5px solid var(--line-strong); background: var(--surface-2); color: var(--fg);
+  border-radius: var(--r); border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--fg);
   font-size: 1.05rem; font-weight: 700; line-height: 1.2; padding: 10px 20px; text-align: center; text-decoration: none; cursor: pointer;
   touch-action: manipulation; -webkit-tap-highlight-color: transparent;
 }
@@ -81,26 +99,21 @@ h2 { font-size: 1.12rem; line-height: 1.25; font-weight: 700; margin: 0; text-wr
 .actions { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
 @media (prefers-reduced-motion: no-preference) { .btn { transition: transform .08s, filter .12s, background-color .12s, border-color .12s; } }
 
-/* ---- Barra de la app: azul marino, el logo en su recuadro blanco (los logos llevan texto de color) y la raya del color
-   de la empresa. ---- */
-.brandbar { background: var(--bar); display: flex; align-items: center; justify-content: center; padding: 12px 16px; border-bottom: 4px solid var(--brand); }
-/* Recuadro blanco del logo (en la guía es el propio enlace a la app). */
-.brandbar-logo, .brandbar a { display: flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px;
-  background: #fff; padding: 8px 14px; border-radius: 7px; }
-/* Tamaño por MÁXIMOS con alto y ancho automáticos: el navegador reduce el logo siempre en proporción. En vw, porque un %
-   sería del propio recuadro, que se ajusta al logo. */
-.brandbar img { height: auto; width: auto; max-height: 30px; max-width: 58vw; object-fit: contain; display: block; }
-/* Sin empresa todavía (menú, escáner, guía): raya del grupo con los tres colores, como en /img/compartir.png. */
-body:not([data-company]) .brandbar { border-image: linear-gradient(90deg, #fcda00 0 33.34%, #009f92 0 66.67%, #f17e49 0) 1; }
-body[data-screen="menu"] .brandbar { padding: 20px 16px; }
-body[data-screen="menu"] .brandbar img { max-height: 50px; max-width: 66vw; }
+/* ---- Cabecera de la app: la hoja es /deca/cabecera.css; aquí, lo que cambia dentro de DECA ---- */
+#cabecera { flex: 0 0 auto; }
+#cabecera a { -webkit-tap-highlight-color: transparent; }
+.campo-cabecera, .shell-header, .shell-sidebar { font-size: 16px; line-height: 1.55; }   /* la letra de la app, no la de cabina */
+.shell-logout { font: inherit; font-size: 13px; font-weight: 600; }
+/* La raya del color de la empresa, bajo la cabecera, mientras se edita o se revisa su orden. */
+body[data-company]:is([data-screen="edit"], [data-screen="review"]) #cabecera { box-shadow: 0 4px 0 var(--brand); position: relative; z-index: 31; }
+body[data-company]:is([data-screen="edit"], [data-screen="review"]) #cabecera .campo-cabecera { position: static; }
 
-/* ---- Avisos: raya de color a la izquierda, fondo suave ---- */
-.banner { padding: 12px 14px; border-radius: var(--r-sm); font-weight: 600; border: 1px solid; border-left-width: 5px; margin: 0; }
+/* ---- Avisos: como los de la app (caja suave con su borde), con la raya de color a la izquierda para verlos de un vistazo ---- */
+.banner { padding: 14px 16px; border-radius: var(--r-sm); font-weight: 600; border: 1px solid; border-left-width: 5px; margin: 0; }
 .banner.bad { border-color: var(--bad); background: var(--bad-bg); }
 .banner.warn { border-color: var(--warn); background: var(--warn-bg); }
 .banner.info { border-color: var(--info); background: var(--info-bg); }
-#err { position: sticky; top: 0; z-index: 30; border-radius: 0; border-width: 0 0 2px; padding: 14px var(--gutter); font-size: 1rem; }
+#err { width: calc(100% - 2 * var(--gutter)); max-width: calc(600px - 2 * var(--gutter)); margin: 16px auto 0; font-size: 1rem; scroll-margin-top: 80px; }
 #edit-banners { display: flex; flex-direction: column; gap: 10px; }
 #edit-banners:empty { display: none; }
 
@@ -115,16 +128,13 @@ body[data-screen="menu"] .brandbar img { max-height: 50px; max-width: 66vw; }
 }
 
 /* ---- Pantalla 1: menú ---- */
-#s-menu { justify-content: center; gap: 18px; }
-/* «DECA - Trimodos» mide ~8 veces el tamaño de letra: se reduce lo justo para que quepa en una línea en móviles estrechos. */
-#s-menu h1 { text-align: center; font-size: min(1.9rem, calc((100vw - 2 * var(--gutter)) / 8.2)); }
-#s-menu .lead { text-align: center; color: var(--muted); margin: -8px auto 6px; max-width: 30ch; }
-#s-menu #btn-scan { position: relative; min-height: min(40vh, 320px); flex-direction: column; gap: 18px; border-radius: var(--r-lg); padding: 32px; font-size: 1.4rem; box-shadow: 0 8px 26px #b79c0026; }
+#s-menu { gap: 16px; }
+#s-menu #btn-scan { position: relative; margin-top: 6px; min-height: min(40vh, 320px); flex-direction: column; gap: 18px; border-radius: var(--r-lg); padding: 32px; font-size: 1.4rem; box-shadow: 0 8px 26px #b79c0026; }
 #s-menu #btn-scan::before { content: ""; position: absolute; inset: 16px; pointer-events: none; --c: rgba(24, 35, 48, .85); --l: 30px; --w: 5px; }
 #btn-scan .qr { width: 60px; height: 60px; display: block; }
 #btn-scan span { max-width: 13ch; text-wrap: balance; }
 #s-menu #btn-guia { min-height: 54px; font-size: 1rem; }   /* secundario: el botón grande sigue siendo uno solo */
-#s-menu #modo { text-align: center; }
+#s-menu #quien, #s-menu #modo { text-align: center; }
 
 /* ---- Pantalla 2: escáner ---- */
 .scan-cam { display: flex; flex-direction: column; gap: 12px; }
@@ -241,13 +251,12 @@ input[type=text]:disabled { color: var(--muted); background: var(--bg); border-c
 /* Pantalla ancha: se aprovecha el espacio en columnas; los textos largos no pasan de ~75 caracteres por línea. */
 @media (min-width: 900px) {
   :root { --gutter: 32px; }
-  .screen { max-width: 1080px; padding-top: 40px; padding-bottom: 56px; gap: 22px; }
+  .screen { max-width: 1080px; padding-top: 34px; padding-bottom: 56px; gap: 22px; }
+  #err { max-width: calc(1080px - 2 * var(--gutter)); margin-top: 24px; }
+  body[data-screen="menu"] #err { max-width: calc(520px - 2 * var(--gutter)); }
+  .empresa { height: 26px; }
   h1 { font-size: 2rem; }
-  .brandbar { padding: 14px 32px; }
-  .brandbar img { max-height: 36px; }
-  body[data-screen="menu"] .brandbar img { max-height: 52px; }
   #s-menu { max-width: 520px; }
-  #s-menu h1 { font-size: 2.2rem; }
   #s-menu #btn-scan { min-height: 280px; }
 
   /* escáner: cámara a la izquierda, pedido escrito a mano a la derecha */

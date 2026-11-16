@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { AREAS } from "@/lib/permisos";
+import { CONTEXTO, iniciales as inicialesDe } from "@/lib/navegacion";
 import { misPendientes } from "@/lib/pendientes";
 import { usuarioActual } from "@/lib/usuario";
 import Icono from "./Icono";
 import Navegacion, { VolverAlInicio } from "./Navegacion";
 
-const CONTEXTO = { direccion: "Dirección · Grupo Trimodos", oficina: "Tu espacio Trimodos", campo: "Grupo Trimodos" } as const;
-
+// La PWA de DECA pinta esta misma cabecera en public/deca/app.js (con /api/sesion/cabecera): si cambias el marcado, cámbialo allí.
 export default async function Cabecera({ nombre }: { nombre?: string }) {
   if (nombre === undefined) {
     return <header className="shell-public-header">
@@ -15,8 +15,7 @@ export default async function Cabecera({ nombre }: { nombre?: string }) {
     </header>;
   }
   const [{ enMenu, pantalla }, { total }] = await Promise.all([usuarioActual(), misPendientes()]);
-  // Iniciales de las dos primeras palabras con letras (un «(ejemplo)» o un número no cuentan).
-  const iniciales = nombre.trim().split(/\s+/).filter((p) => /^\p{L}/u.test(p)).slice(0, 2).map((p) => p[0]).join("").toUpperCase() || "GT";
+  const iniciales = inicialesDe(nombre);
   const avisos = <Link className={`shell-avisos ${total ? "con-avisos" : ""}`} href="/pendientes"
     aria-label={total ? `Pendientes: ${total}` : "Pendientes: nada"} title="Lo que tienes pendiente y tus novedades">
     <Icono nombre="campana" size={21} />{total > 0 && <span className="shell-avisos-cuenta">{total > 99 ? "99+" : total}</span>}
