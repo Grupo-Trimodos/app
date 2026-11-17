@@ -103,6 +103,7 @@ export default async function PaginaEquipo({ searchParams }: { searchParams: Pro
       <Cabecera nombre={perfil.nombre || perfil.email || ""} />
       <main className="contenido">
         <div className="admin-cabecera"><h1>Mi equipo</h1>
+          {puede("personas.vincular") && <Link className="btn pequeno" href="/equipo/odoo">Enlazar con Odoo</Link>}
           {puede("zonas.gestionar") && <Link className="btn pequeno" href="/equipo/zonas">Chóferes por cliente o ruta</Link>}</div>
         <OrigenDato fuente="App · Personas de tu equipo">
           <p>Personas con acceso a la app dentro de tu alcance por centro y departamento. Los fichajes, solicitudes y camiones confirmados proceden de la app.</p>
@@ -196,7 +197,8 @@ export default async function PaginaEquipo({ searchParams }: { searchParams: Pro
                       </span>
                       {odoo && <div style={{ marginTop: 6 }}>
                         <EstadoOdoo estado={odoo.odoo_estado} error={odoo.odoo_estado === "sin_empleado"
-                          ? `${odoo.odoo_error ?? "Falta su ficha de empleado en Odoo"}. Lo arregla la administración.` : odoo.odoo_error} detalle />
+                          ? `${odoo.odoo_error ?? "Falta su ficha de empleado en Odoo"}. ${puede("personas.vincular")
+                            ? "Enlázala en «Enlazar con Odoo»." : "Lo arregla la administración."}` : odoo.odoo_error} detalle />
                         {odoo.odoo_estado === "error" && corregir && <form action={reintentarOdoo}>
                           <input type="hidden" name="usuario_id" value={x.usuario_id} />
                           <button className="btn pequeno">Reintentar</button>

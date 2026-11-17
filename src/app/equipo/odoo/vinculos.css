@@ -1,0 +1,21 @@
+/* «Enlazar con Odoo» (/equipo/odoo): opciones grandes, cómodas en el móvil. */
+.vinculo-persona h3 { margin-bottom: 6px; }
+.vinculo-grupo { border: 1px solid var(--borde); border-radius: 12px; padding: 6px 12px 10px; margin: 16px 0; min-width: 0; }
+.vinculo-grupo legend { font-weight: 700; font-size: 14px; padding: 0 6px; }
+.vinculo-opcion { display: flex; gap: 12px; align-items: flex-start; font-weight: 400; font-size: 16px; margin: 0;
+  padding: 12px 4px; border-bottom: 1px solid var(--borde); cursor: pointer; }
+.vinculo-opcion:last-child { border-bottom: 0; }
+.vinculo-opcion input[type="radio"] { width: 24px; min-height: 24px; height: 24px; margin-top: 2px; flex: none; accent-color: #214c72; }
+.vinculo-opcion > span { display: flex; flex-direction: column; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
+.vinculo-opcion small { color: var(--suave); font-size: 14px; }
+.vinculo-opcion.no-elegible { cursor: not-allowed; opacity: .75; }
+.vinculo-etiquetas { display: flex; flex-wrap: wrap; gap: 6px; }
+.vinculo-lista { list-style: none; margin: 0; padding: 0; }
+.vinculo-lista li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0;
+  border-bottom: 1px solid var(--borde); }
+.vinculo-lista li:last-child { border-bottom: 0; }
+.vinculo-lista li > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
+.vinculo-lista small { font-size: 14px; }
+@media (max-width: 560px) {
+  .vinculo-lista li { flex-direction: column; align-items: stretch; }
+}

@@ -12,7 +12,9 @@ Se lanzan desde la carpeta del proyecto con el entorno de Python: `.venv/bin/pyt
 | `diagnostico` | Abre un pedido (p. ej. `S2621473`) como lo haría DECA, enseña lo que encuentra y lista los campos de etapa y estado de tareas y bultos. Necesita `ODOO_MODE=real`. | Para averiguar por qué un pedido no carga en DECA. |
 | `diagnostico_movildata` | La forma de cada respuesta de Movildata (tipo, cuántos y nombres de campos) y si la app la sabe leer. No enseña datos ni la clave. | Si Movildata cambia su formato o la flota sale vacía. |
 | `prueba_grupos_db` | Comprueba en un PostgreSQL local (Docker, `--contenedor trimodos-jornada-pruebas`) que cada persona solo lee y gestiona lo de su centro, zona y departamento, consultando la base directamente. | Al tocar permisos, centros, departamentos o las políticas de fichajes y ausencias. |
+| `prueba_vinculo_db` | Comprueba en un PostgreSQL local (Docker, `--contenedor trimodos-jornada-pruebas`) el enlace con Odoo por el móvil: cada uno guarda solo su móvil, el responsable confirma solo a los de sus centros, una ficha no va a dos personas y el historial no se toca. `--como-produccion` salta las migraciones que aún no están en producción. | Al tocar `usuarios`, el enlace con Odoo o los permisos de responsables. |
 | `comprobar_compatibilidad` | Comprueba, solo leyendo, si la app funcionaría con otra versión de Odoo (p. ej. la 18). Usa `ENV_FILE` para apuntar al entorno a probar. | Antes de actualizar Odoo. |
+| `comprobar_gasoleo.mjs` | Compara la calculadora de gasóleo de la app con la original de GitHub en miles de casos. Es de Node: `node --experimental-strip-types scripts/comprobar_gasoleo.mjs <index.html> <data.json>` (`docs/automatizaciones.md`). | Al tocar `src/lib/gasoleo.ts`. |
 
 `comprobar_compatibilidad` revisa también los campos habituales que usa el envío de fichajes y ausencias en
 `hr.employee`, `hr.attendance`, `hr.leave` y `hr.leave.type`. Consulta su definición (`fields_get`), sin leer fichas

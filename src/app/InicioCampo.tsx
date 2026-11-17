@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 import MiOrganizacion from "./MiOrganizacion";
+import PedirTelefono from "./PedirTelefono";
+import TarjetaViajes from "./TarjetaViajes";
 import Link from "next/link";
 import RelojJornada from "./RelojJornada";
 import { leerFichajesJornada } from "@/lib/jornadas-servidor";
@@ -60,6 +62,7 @@ export default async function InicioCampo({ nombre, ok, error }: { nombre: strin
     esDeSuPuesto("documentos.propios") && { href: "/documentos", icono: "documento", texto: "Mi documentación" },
     esDeSuPuesto("incidencias.reportar") && { href: "/incidencias", icono: "aviso", texto: "Avisar de una incidencia" },
     esDeSuPuesto("fichaje.fichar") && { href: "/fichaje", icono: "reloj", texto: "Mis fichajes" },
+    esDeSuPuesto("equipos.ver") && !puede("equipos.crear") && { href: "/equipos", icono: "equipo", texto: "Mis equipos" },
   ].filter((a): a is { href: string; icono: string; texto: string; completa?: boolean } => !!a);
   // Lo que gestiona además de su puesto (p. ej. un operario que es Responsable: «Mi equipo»). Sale de sus permisos de
   // gestión, nunca del nombre del perfil; sin menú, es su única forma de llegar.
@@ -74,6 +77,9 @@ export default async function InicioCampo({ nombre, ok, error }: { nombre: strin
     {ok && <p className="aviso" role="status">{ok}</p>}
     {error && <p className="error" role="alert">{error}</p>}
 
+    {/* Solo mientras no haya dado su móvil (para enlazar su cuenta con su ficha de Odoo). */}
+    <Suspense fallback={null}><PedirTelefono volver="/" /></Suspense>
+
     {registro && <section className={`campo-jornada ${estado}`} aria-labelledby="campo-jornada-t">
       <h2 id="campo-jornada-t" className="sr-only">Mi jornada</h2>
       <RelojJornada fichajes={fichajes} instante={ahora.toISOString()} error={!!registro.error} permitirFichar={esDeSuPuesto("fichaje.fichar")} volver="/" />
@@ -85,6 +91,11 @@ export default async function InicioCampo({ nombre, ok, error }: { nombre: strin
       {sinEnviar && <form action={reintentarOdoo}><input type="hidden" name="volver" value="/" />
         <button className="btn ancho pequeno campo-secundario">Reintentar envío a Odoo</button></form>}
     </section>}
+
+    {/* La orden en curso (Odoo) y el paso que toca: en su propio Suspense para no esperar a Odoo. */}
+    {esDeSuPuesto("viajes.usar") && <Suspense fallback={<Link href="/viajes" className="campo-viaje">
+      <h2><Icono nombre="ruta" size={20} />Mis viajes</h2><p className="hint">Buscando tus órdenes…</p></Link>}>
+      <TarjetaViajes /></Suspense>}
 
     <Suspense fallback={null}><MiOrganizacion /></Suspense>
 

@@ -141,7 +141,7 @@ async def security_headers(request: Request, call_next):
 
 
 # Fichaje y ausencias (envío a Odoo) y datos de Movildata para chóferes.
-from . import chofer, direccion, flota, organizacion, rrhh, sincronizacion  # noqa: E402
+from . import chofer, direccion, flota, gasoleo, organizacion, rrhh, sincronizacion  # noqa: E402
 
 rrhh._odoo_factory = get_odoo
 app.include_router(rrhh.router)
@@ -150,6 +150,7 @@ app.include_router(flota.router)
 app.include_router(organizacion.router)
 app.include_router(sincronizacion.router)
 app.include_router(direccion.router)
+app.include_router(gasoleo.router)   # Automatizaciones: precios del gasóleo del Ministerio
 
 # Proceso ARGON (Excel de Carburos → pedidos en Odoo 18). Protegido por su propia clave (ARGON_CLAVE).
 from .argon import argon_api  # noqa: E402

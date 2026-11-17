@@ -167,8 +167,53 @@ def dominio_analitico(cuentas: list[int], etiquetas: list[int]) -> list:
     return ["|", *hojas] if len(hojas) == 2 else hojas
 
 
+# ---- «Mis viajes»: órdenes de transporte emitidas o aprobadas de un conductor (docs/viajes.md) -----------------------
+VIAJES_DIAS_ATRAS = 3        # órdenes con inicio previsto desde hace 3 días…
+VIAJES_DIAS_ADELANTE = 14    # …hasta dentro de 14 (medido el 17-11-2026: como mucho 7 órdenes por conductor)
+CAMPOS_VIAJE = [
+    "name", "company_id", "driver_id", "partner_id", "shipping_origin_id", "shipping_destination_id", "final_destination_id",
+    "loading_port_id", "unloading_port_id", "planned_date_start", "planned_date_end", "date_deadline", "load_reference",
+    "client_order_ref", "trailer_id", "unload_service", "sale_order_id", "stage_id", "state",
+    "tms_transport_order_creation_date",
+]
+
+
+def dominio_viajes(conductores: list[int], empresas: list[int], hoy: date | None = None,
+                   incluir: list[int] | None = None, tarea: int | None = None) -> list:
+    """Órdenes de transporte de estos conductores que les han llegado: emitidas (Odoo generó la orden) o aprobadas, y
+    sin terminar (ni hechas ni canceladas, ni en una etapa plegada: Realizado, Facturable, Finalizados, Cancelado…).
+    Con `tarea`, solo esa orden (sin ventana de fechas). Si no, las de la ventana de fechas (inicio previsto, o fecha de
+    emisión si no tiene) y además las de `incluir` (las que el chófer ha empezado en la app y aún no ha descargado)."""
+    ids = sorted({int(c) for c in conductores})
+    if not ids or any(i <= 0 for i in ids):
+        raise ValueError("Hace falta el contacto conductor enlazado")
+    base = [
+        ["is_transport_order", "=", True],
+        ["driver_id", "in", ids],
+        ["company_id", "in", sorted({int(e) for e in empresas})],
+        "|", ["tms_transport_order_creation_date", "!=", False], ["state", "=", "03_approved"],
+        ["state", "not in", ["1_done", "1_canceled"]],
+        ["stage_id.fold", "=", False],
+    ]
+    if tarea is not None:
+        return base + [["id", "=", int(tarea)]]
+    hoy = hoy or date.today()
+    desde = f"{(hoy - timedelta(days=VIAJES_DIAS_ATRAS)).isoformat()} 00:00:00"
+    hasta = f"{(hoy + timedelta(days=VIAJES_DIAS_ADELANTE + 1)).isoformat()} 00:00:00"
+    ventana = ["|", "&", ["planned_date_start", ">=", desde], ["planned_date_start", "<", hasta],
+               "&", ["planned_date_start", "=", False], ["tms_transport_order_creation_date", ">=", desde]]
+    extra = sorted({int(i) for i in incluir or [] if int(i) > 0})
+    return base + (["|", ["id", "in", extra], *ventana] if extra else ventana)
+
+
 def _m2o(valor) -> tuple[int | None, str]:
     return (valor[0], valor[1]) if isinstance(valor, (list, tuple)) and len(valor) == 2 else (None, "Sin asignar")
+
+
+def _es_remolque(clave: str, etiqueta: str) -> bool:
+    """Tipo de vehículo de remolque o semirremolque (clave o nombre visible de `vehicle_type`)."""
+    texto = f"{clave} {etiqueta}".lower()
+    return "remolque" in texto or "trailer" in texto
 
 
 class OdooClient:
@@ -616,11 +661,134 @@ class OdooClient:
             "incluye_externos": incluir_externos,
         }
 
+    # ---- enlace de cada persona de la app con Odoo (solo lectura, dominios fijos) ------------------------------
+    # Los teléfonos leídos solo sirven para comparar en servicios/organizacion.py: nunca salen enteros de la API.
+    def empleados_para_vincular(self) -> list[dict]:
+        """Fichas de empleado activas de las empresas configuradas, con lo justo para reconocer a la persona."""
+        filas = self._call(EMPLOYEE_MODEL, "search_read", [[["active", "=", True], ["company_id", "in", self.s.company_ids]]], {
+            "fields": ["name", "company_id", "department_id", "job_id", "work_phone", "mobile_phone", "private_phone"],
+            "order": "name,id", "limit": 2001})
+        if len(filas) > 2000:
+            raise AppError("Hay demasiadas fichas de empleado para proponer enlaces. Avisa a administración.", 503, "vinculos_incompletos")
+        return filas
+
+    def conductores_para_vincular(self) -> list[dict]:
+        """Contactos conductores del grupo: activos, con `is_driver`, que cuelgan (directamente o por un centro) del contacto
+        de una empresa configurada o que tienen ficha de empleado en ellas. Mismo criterio que avisos_asignacion_flota."""
+        ids = self._ids_empresa()
+        empresas = self._call("res.company", "search_read", [[["id", "in", ids]]], {"fields": ["partner_id"]})
+        contactos = sorted({_m2o(e.get("partner_id"))[0] for e in empresas if e.get("partner_id")})
+        filas = self._call("res.partner", "search_read", [[
+            ["active", "=", True], ["is_driver", "=", True], ["id", "not in", contactos],
+            "|", ["parent_id", "child_of", contactos], ["employee_ids.company_id", "in", ids]]], {
+            "fields": ["name", "parent_id", "company_id", "phone", "mobile"], "order": "name,id", "limit": 2001})
+        if len(filas) > 2000:
+            raise AppError("Hay demasiados contactos conductores para proponer enlaces. Avisa a administración.", 503, "vinculos_incompletos")
+        return filas
+
+    # ---- «Mis viajes» (solo lectura, dominio fijo de dominio_viajes) --------------------------------------------
+    # Los ids de conductor salen SIEMPRE del enlace confirmado guardado en Supabase (servicios/viajes.py), nunca de fuera.
+    def ordenes_de_conductores(self, conductores: list[int], hoy: date | None = None, incluir: list[int] | None = None,
+                               limite: int = 60) -> list[dict]:
+        """Órdenes que les han llegado a estos conductores (hasta `limite` + 1, para saber si hay más)."""
+        return self._call(TASK_MODEL, "search_read", [dominio_viajes(conductores, self._ids_empresa(), hoy, incluir)],
+                          {"fields": CAMPOS_VIAJE, "order": "planned_date_start asc, id asc", "limit": max(1, min(int(limite), 1000)) + 1})
+
+    def orden_de_conductor(self, conductor: int, tarea: int) -> dict | None:
+        """Esa orden, solo si le ha llegado a ese conductor y sigue abierta."""
+        filas = self._call(TASK_MODEL, "search_read", [dominio_viajes([conductor], self._ids_empresa(), tarea=tarea)],
+                           {"fields": CAMPOS_VIAJE, "limit": 1})
+        return filas[0] if filas else None
+
     def vehiculos_flota(self) -> list[dict]:
         rows = self._call(FLEET_MODEL, "search_read", [[["active", "=", True]]],
                           {"fields": ["id", "license_plate", "model_id"], "limit": 2000})
         return [{"id": r["id"], "matricula": r.get("license_plate") or "",
                  "modelo": (r.get("model_id") or [None, None])[1]} for r in rows]
+
+    def avisos_asignacion_flota(self) -> dict:
+        """Camiones propios sin chófer y chóferes del grupo sin camión (solo lectura, dominios fijos, sin copias).
+
+        Camión propio: activo, `is_own_vehicle` y `company_owner_id` de las empresas configuradas. Si su conductor es un
+        contacto archivado, cuenta como sin chófer (con la nota `chofer_baja`). Chófer del grupo: contacto activo con
+        `is_driver` que cuelga, directamente o a través de un centro (STINSA SEVILLA, BURRIANA…), del contacto de una
+        empresa configurada, o que tiene ficha de empleado en ellas; los demás contactos conductores (casi todos de
+        subcontratas) no cuentan. Un chófer dado de alta en Odoo fuera de ese árbol y sin ficha no aparece."""
+        ids = self._ids_empresa()
+        empresas = self._call("res.company", "search_read", [[["id", "in", ids]]], {"fields": ["name", "partner_id"]})
+        contacto_empresa = {_m2o(e.get("partner_id"))[0]: e.get("name") or "" for e in empresas if e.get("partner_id")}
+        tipos = self._call(FLEET_MODEL, "fields_get", [["vehicle_type"]], {"attributes": ["selection"]})
+        etiqueta_tipo = {k: v for k, v in (tipos.get("vehicle_type") or {}).get("selection") or []}
+        vehiculos = self._call(FLEET_MODEL, "search_read", [[
+            ["active", "=", True], ["is_own_vehicle", "=", True], ["company_owner_id", "in", ids]]], {
+            "fields": ["license_plate", "model_id", "company_owner_id", "driver_id", "vehicle_type"],
+            "order": "license_plate,id", "limit": 2001})
+        # «child_of» incluye los contactos de los centros y también el de la propia empresa, que se excluye.
+        choferes = self._call("res.partner", "search_read", [[
+            ["active", "=", True], ["is_driver", "=", True], ["id", "not in", sorted(contacto_empresa)],
+            "|", ["parent_id", "child_of", sorted(contacto_empresa)], ["employee_ids.company_id", "in", ids]]], {
+            "fields": ["name", "parent_id", "company_id", "employee_ids"], "order": "name,id", "limit": 2001})
+        if len(vehiculos) > 2000 or len(choferes) > 2000:
+            raise AppError("La flota supera el límite de consulta. Avisa a administración.", 503, "flota_incompleta")
+
+        # `read` devuelve también los contactos archivados: así se sabe si el conductor asignado sigue de alta.
+        asignados = sorted({c for c in (_m2o(v.get("driver_id"))[0] for v in vehiculos) if c is not None})
+        fichas = {f["id"]: f for f in self._call("res.partner", "read", [asignados], {"fields": ["active", "employee_ids"]})
+                  } if asignados else {}
+
+        sin_chofer, remolques, por_conductor = [], [], {}
+        for v in vehiculos:
+            clave = v.get("vehicle_type") or ""
+            tipo = etiqueta_tipo.get(clave) or clave or "Sin tipo"
+            fila = {"id": v["id"], "matricula": v.get("license_plate") or "Sin matrícula",
+                    "modelo": _m2o(v.get("model_id"))[1], "empresa": _m2o(v.get("company_owner_id"))[1], "tipo": tipo}
+            conductor, nombre = _m2o(v.get("driver_id"))
+            if conductor is not None and (fichas.get(conductor) or {}).get("active"):
+                por_conductor.setdefault(conductor, {"nombre": nombre, "matriculas": []})["matriculas"].append(fila["matricula"])
+                continue
+            if conductor is not None:
+                fila["chofer_baja"] = nombre if isinstance(nombre, str) else ""
+            (remolques if _es_remolque(clave, tipo) else sin_chofer).append(fila)
+
+        # Empresa de cada chófer: se sube por los contactos padre (centro → empresa) con lecturas sueltas.
+        padre_de: dict[int, int | None] = {}
+        pendientes = {p for p in (_m2o(c.get("parent_id"))[0] for c in choferes) if p is not None and p not in contacto_empresa}
+        for _ in range(5):
+            if not pendientes:
+                break
+            leidos = self._call("res.partner", "read", [sorted(pendientes)], {"fields": ["parent_id"]})
+            padre_de.update({r["id"]: _m2o(r.get("parent_id"))[0] for r in leidos})
+            pendientes = {p for p in padre_de.values() if p is not None and p not in contacto_empresa and p not in padre_de}
+
+        def por_arbol(c: dict) -> str | None:
+            padre, vistos = _m2o(c.get("parent_id"))[0], set()
+            while padre is not None and padre not in contacto_empresa and padre not in vistos:
+                vistos.add(padre)
+                padre = padre_de.get(padre)
+            return contacto_empresa.get(padre) if padre is not None else None
+
+        # Los que no cuelgan de una empresa: la empresa de su ficha de empleado (solo las configuradas).
+        empleados = sorted({e for c in choferes if por_arbol(c) is None for e in c.get("employee_ids") or []})
+        empresa_empleado = {r["id"]: _m2o(r.get("company_id"))[0] for r in self._call(
+            "hr.employee", "read", [empleados], {"fields": ["company_id"]})} if empleados else {}
+        nombre_empresa = {e["id"]: e.get("name") or "" for e in empresas}
+
+        def empresa_de(c: dict) -> str:
+            if (nombre := por_arbol(c)) is not None:
+                return nombre
+            for e in c.get("employee_ids") or []:
+                if empresa_empleado.get(e) in nombre_empresa:
+                    return nombre_empresa[empresa_empleado[e]]
+            return _m2o(c.get("company_id"))[1] if c.get("company_id") else "Sin indicar"
+
+        sin_camion = [{"id": c["id"], "nombre": c.get("name") or "Sin nombre", "empresa": empresa_de(c)}
+                      for c in choferes if c["id"] not in por_conductor]
+        varios = sorted(({"id": i, "nombre": d["nombre"], "matriculas": d["matriculas"]}
+                         for i, d in por_conductor.items() if len(d["matriculas"]) > 1), key=lambda d: d["nombre"])
+        sin_ficha = sum(1 for i in por_conductor if not fichas[i].get("employee_ids"))
+        return {"camiones": len(vehiculos), "camiones_sin_chofer": sin_chofer, "remolques_sin_chofer": remolques,
+                "choferes_sin_camion": sin_camion, "choferes_varios_camiones": varios,
+                "conductores": len(por_conductor), "conductores_sin_ficha": sin_ficha}
 
     def _major(self) -> int:
         if self._major_cache is None:

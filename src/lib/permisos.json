@@ -48,6 +48,14 @@
       ]
     },
     {
+      "id": "viajes", "nombre": "Mis viajes", "ruta": "/viajes",
+      "descripcion": "Las órdenes de transporte del chófer (de Odoo) para marcar la llegada, la carga y la descarga. Los pasos se guardan solo en la app.",
+      "permisos": [
+        { "id": "viajes.usar", "nombre": "Ver sus órdenes de transporte y marcar carga y descarga", "de_puesto": true },
+        { "id": "viajes.seguimiento", "nombre": "Ver en qué punto está cada viaje de las personas de sus centros" }
+      ]
+    },
+    {
       "id": "ausencias", "nombre": "Vacaciones y ausencias", "ruta": "/ausencias",
       "descripcion": "Pedir días y ver si están aprobados.",
       "permisos": [
@@ -61,7 +69,16 @@
         { "id": "equipo.ver", "nombre": "Ver a las personas de sus centros (estado, fichajes, ausencias, camión)" },
         { "id": "ausencias.aprobar", "nombre": "Aprobar o rechazar ausencias de las personas de sus centros" },
         { "id": "fichaje.corregir", "nombre": "Corregir fichajes de las personas de sus centros" },
-        { "id": "zonas.gestionar", "nombre": "Organizar a los chóferes de sus centros por cliente o ruta (zonas)" }
+        { "id": "zonas.gestionar", "nombre": "Organizar a los chóferes de sus centros por cliente o ruta (zonas)" },
+        { "id": "personas.vincular", "nombre": "Confirmar qué ficha de Odoo corresponde a cada persona de sus centros" }
+      ]
+    },
+    {
+      "id": "equipos", "nombre": "Equipos", "ruta": "/equipos",
+      "descripcion": "Grupos de trabajo de personas de cualquier centro o zona. Sirven para organizarse; no dan permisos sobre nadie.",
+      "permisos": [
+        { "id": "equipos.crear", "nombre": "Crear equipos y gestionar los suyos (renombrar, archivar, añadir y quitar personas de cualquier centro)" },
+        { "id": "equipos.ver", "nombre": "Ver los equipos en los que está y quién más está en ellos", "de_puesto": true }
       ]
     },
     {

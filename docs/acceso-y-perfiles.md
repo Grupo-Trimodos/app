@@ -36,6 +36,70 @@ app no las cambia en Odoo. La sincronización desde Odoo está por hacer: hoy la
 - **No confundir** con `zonas` y `chofer_zona` (chóferes por cliente o ruta), ocultas en el piloto.
 - **Pruebas:** `scripts.prueba_grupos_db` (PostgreSQL local en Docker).
 
+## Equipos (17-11-2026)
+
+`/equipos` (migración `20261117100000_equipos.sql`, tablas `equipos_trabajo` y `equipos_trabajo_miembros`; el nombre
+`equipos` ya era de las carretillas de Seguridad). No confundir con «Mi equipo» (`/equipo`), que son las personas a tu
+cargo por centro.
+
+- **Qué son:** grupos de trabajo que crea un responsable con personas activas de **cualquier** centro, zona u oficina
+  («aunque se trabaje en la misma zona no se trabaja en lo mismo»). No dependen de centros, zonas ni departamentos.
+- **No dan permisos:** estar en un equipo, o haberlo creado, no deja aprobar ausencias, corregir fichajes ni ver la
+  jornada de nadie. Eso sigue saliendo del perfil y del centro (`privado.puedo_sobre`, sin cambios).
+- **Quién los crea:** quien tiene `equipos.crear` (perfiles Responsable y Administrador). Quien crea un equipo entra en
+  él y lo gestiona: cambiar nombre, añadir y quitar personas, archivar y recuperar. Si pierde `equipos.crear`, lo sigue
+  viendo pero ya no lo gestiona. La administración (superadministrador o perfil con `admin.usuarios`) ve y gestiona
+  todos.
+- **Quién los ve:** sus miembros (`equipos.ver`, de puesto: Chófer, Operario y Oficina; los de campo lo tienen en su
+  inicio como «Mis equipos»), su creador y la administración. Un equipo archivado solo lo ven su creador y la
+  administración. Nunca se borran: se archivan.
+- **Datos de los compañeros:** solo el nombre, con `public.miembros_equipo(equipo)`. Para añadir a alguien,
+  `public.buscar_personas_equipo(texto)` (exige `equipos.crear`, 2 letras como mínimo, 20 resultados, sin tildes): solo
+  id y nombre de personas activas.
+- **Rendimiento:** las políticas usan `privado.mis_equipos()` y `privado.equipos_que_gestiono()`, calculadas una vez por
+  consulta. Un futuro chat colgará sus mensajes del id del equipo y usará la misma `privado.mis_equipos()`.
+- **Pruebas:** `scripts.prueba_equipos_db` (PostgreSQL local en Docker).
+
+## Enlace con Odoo por el móvil (17-11-2026)
+
+Autorizado por Félix: «los chóferes se enlazan con empleados de Odoo a través del número de teléfono, y luego el
+encargado confirma que el perfil de la app y el de Odoo son la misma persona». Migración
+`20261117110000_vinculo_odoo_telefono.sql`. Qué alcanza en los envíos a Odoo: [odoo.md](odoo.md#enlace-de-cada-persona-con-odoo-por-su-móvil-17-11-2026).
+
+- **No hay autorregistro:** las cuentas las sigue creando administración (código + PIN o Microsoft). El móvil se pide al
+  entrar: a quien tiene en sus perfiles `fichaje.fichar` o `chofer.usar` y aún no lo ha dado le sale, arriba del inicio,
+  «Escribe tu número de móvil» con un botón grande (`src/app/PedirTelefono.tsx`). En «Mi perfil» lo ve y lo corrige
+  mientras su responsable no lo haya confirmado. No bloquea fichar.
+- **Dos ids de Odoo por persona:** `usuarios.odoo_employee_id` (ficha de empleado, `hr.employee`: de ella salen los
+  envíos de fichajes y ausencias) y `usuarios.odoo_conductor_id` (contacto conductor, `res.partner` con `is_driver`: el
+  que llevan las órdenes de transporte; en Odoo no está unido a la ficha de empleado; hoy la app no envía nada con él).
+- **Quién confirma:** quien tiene `personas.vincular` («Confirmar qué ficha de Odoo corresponde a cada persona de sus
+  centros», área «Mi equipo»; la migración se lo da a Responsable y Administrador) sobre las personas de sus centros
+  (`privado.puedo_sobre`), o la administración (`admin.usuarios` o superadministrador). Nadie confirma su propio enlace,
+  salvo un superadministrador. Pantalla: **Mi equipo → Enlazar con Odoo** (`/equipo/odoo`).
+- **Qué se propone** (`GET /api/odoo/vinculos/pendientes`, `servicios/organizacion.py`): las fichas de empleado activas
+  de las empresas configuradas y los contactos conductores del grupo cuyo teléfono (últimas 9 cifras) coincide con el
+  móvil de la persona. Si no coincide ninguno, fichas con un nombre parecido, marcadas «Por nombre, compruébalo». Un
+  teléfono que está en varias fichas (centralitas) no se marca como seguro. De Odoo nunca sale un teléfono entero: como
+  mucho sus 3 últimas cifras. Quién sale lo decide Supabase con la sesión de quien mira
+  (`public.personas_para_vincular()`).
+- **Confirmar y deshacer:** `public.confirmar_vinculo_odoo(persona, empleado, conductor)` y
+  `public.deshacer_vinculo_odoo(persona)`. Antes de confirmar, la pantalla vuelve a pedir las propuestas y solo acepta
+  una ficha propuesta y libre. Una ficha de empleado o un contacto conductor no se enlaza con dos personas. Para cambiar
+  un enlace confirmado hay que deshacerlo antes. Con el enlace confirmado, la persona ya no cambia su móvil.
+- **Historial:** `vinculos_odoo_historial`, solo crece. Quién confirmó o deshizo qué y cuándo, con el móvil y los ids
+  anteriores y nuevos. Lo ven la administración y quien actuó.
+- **Otras vías siguen abiertas:** el campo «id de empleado» de Administración → Personas y el enlace automático por
+  correo o código (`servicios/rrhh.py`). Si cambian la ficha de alguien, el enlace deja de contar como confirmado y queda
+  en el historial («cambio en administración» o «cambio del servidor»). Nadie con sesión puede marcar un enlace como
+  confirmado ni tocar el contacto conductor sin pasar por las funciones.
+- **Las políticas de cambio de `usuarios` no cambian:** la persona no edita su fila; el móvil va por
+  `public.guardar_mi_telefono(texto)`, que lo normaliza (solo cifras con el prefijo del país: `34612345678`).
+- **En el piloto** el perfil Chófer no tiene `chofer.usar`, así que la pantalla no sabe quién es chófer: propone
+  contacto conductor a cualquiera cuyo móvil o nombre coincida con uno, con la opción «Ninguno».
+- **Pruebas:** `scripts.prueba_vinculo_db` (PostgreSQL local en Docker; `--como-produccion` salta las migraciones que
+  aún no están en producción) y `tests/test_vinculos_odoo.py`.
+
 ## Perfiles y pantallas
 
 - **Cuatro perfiles básicos, que no se borran ni cambian de nombre** (`perfiles.base`, lo impide la base de datos): **Administrador**, **Oficina**, **Chófer** y **Operario**. Cada persona tiene **un puesto en su centro**. Encima se le suman **complementos**: **Responsable**, que aprueba lo de su centro, y **Seguridad**, que vale en todos los centros. Los permisos de cada perfil se siguen editando con casillas.

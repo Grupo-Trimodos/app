@@ -1,0 +1,123 @@
+/* Automatizaciones · Revisión por gasóleo. Colores de la app: referencia en azul, realización en amarillo,
+   resultado en el azul oscuro de la jornada con rótulos amarillos. */
+.gasoleo-page {
+  --gas-ref: #355d85; --gas-ref-suave: rgba(53, 93, 133, .13);
+  --gas-real: #7a5d06; --gas-real-suave: rgba(252, 218, 0, .30);
+  --gas-linea: #214c72; --gas-oscuro: #182d3e;
+}
+.gasoleo-page .mono { font-variant-numeric: tabular-nums; }
+.gasoleo-volver { display: inline-flex; align-items: center; min-height: 44px; margin-bottom: 8px; font-weight: 600; text-decoration: none; }
+.gasoleo-volver:hover { text-decoration: underline; }
+
+/* Estado de los datos */
+.gasoleo-estado { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 32px; }
+.gasoleo-dato { display: grid; gap: 2px; }
+.gasoleo-dato b { font-size: 17px; font-variant-numeric: tabular-nums; }
+.gasoleo-dato span { font-size: 13px; color: var(--suave); }
+.gasoleo-estado .btn { margin-left: auto; }
+.gasoleo-estado .aviso { flex-basis: 100%; margin: 0; }
+.gasoleo-carga { padding: 32px; }
+.gasoleo-carga-barra { height: 5px; background: #edf0f3; border-radius: 5px; overflow: hidden; }
+.gasoleo-carga-barra span { display: block; width: 35%; height: 100%; background: var(--acento); animation: gasoleo-carga 1.4s ease-in-out infinite; }
+@keyframes gasoleo-carga { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
+.gasoleo-sin-precios .error { margin-top: 0; }
+.gasoleo-botones { display: flex; flex-wrap: wrap; gap: 12px; }
+
+/* Referencia y realización, enfrentadas */
+.gasoleo-par { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 0 20px; }
+.gasoleo-periodo { border-top: 4px solid var(--gas-ref); }
+.gasoleo-periodo.real { border-top-color: #e0c000; }
+.gasoleo-periodo h2 { margin: 12px 0 0; font-size: 19px; }
+.gasoleo-periodo-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.gasoleo-etiqueta { display: inline-flex; align-items: center; min-height: 28px; padding: 2px 10px; border-radius: 6px; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.gasoleo-etiqueta.ref { background: var(--gas-ref-suave); color: var(--gas-ref); }
+.gasoleo-etiqueta.real { background: var(--gas-real-suave); color: var(--gas-real); }
+.gasoleo-modo { display: inline-flex; border: 1px solid #cdd6df; border-radius: 10px; overflow: hidden; flex: none; }
+.gasoleo-modo button { min-height: 44px; min-width: 64px; padding: 0 14px; border: 0; background: #fff; color: var(--texto); font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+.gasoleo-modo button + button { border-left: 1px solid #cdd6df; }
+.gasoleo-modo button[aria-pressed="true"] { background: var(--gas-oscuro); color: #fff; }
+.gasoleo-lectura { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 16px 0 0; padding-top: 14px; border-top: 1px dashed var(--borde); }
+.gasoleo-lectura strong { font-size: 30px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.gasoleo-lectura span { color: var(--suave); font-size: 14px; }
+.gasoleo-lectura small { flex-basis: 100%; color: var(--suave); font-size: 14px; }
+
+/* Vehículo y contrato */
+.gasoleo-ajustes h2 { margin-bottom: 4px; font-size: 19px; }
+.gasoleo-campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 0 16px; }
+.gasoleo-campo { min-width: 0; }
+.gasoleo-casillas { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px 28px; margin-top: 12px; }
+.gasoleo-casilla { display: flex; align-items: center; gap: 10px; min-height: 48px; margin: 0; font-weight: 400; font-size: 15px; cursor: pointer; }
+.gasoleo-casilla input { flex: none; }
+.gasoleo-casilla:has(input:disabled) { color: var(--suave); cursor: default; }
+.gasoleo-c { width: 160px; }
+.gasoleo-c label { margin-top: 4px; }
+.gasoleo-pista { margin: 12px 0 0; }
+
+/* Resultado */
+.gasoleo-resultado { display: grid; gap: 18px; margin-bottom: 20px; padding: 24px; background: var(--gas-oscuro); color: #fff; border-radius: var(--r); border-top: 5px solid var(--acento); }
+.gasoleo-resultado h2 { margin: 0; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #d7e1e9; }
+.gasoleo-cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; }
+.gasoleo-cifras > div { display: grid; gap: 6px; align-content: start; min-width: 0; }
+.gasoleo-k { color: var(--acento); font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.gasoleo-v { font-size: clamp(34px, 5vw, 46px); font-weight: 800; line-height: 1.05; letter-spacing: -.03em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.gasoleo-v.pequena { font-size: clamp(26px, 3.6vw, 34px); }
+.gasoleo-s { color: #b4c5d3; font-size: 13px; overflow-wrap: anywhere; }
+.gasoleo-veredicto { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-top: 14px; border-top: 1px solid #2c4659; }
+.gasoleo-pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; font-size: 14px; font-weight: 700; background: #fff; }
+.gasoleo-pill::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.gasoleo-pill.ok { color: var(--ok); }
+.gasoleo-pill.warn { color: #8a5a00; }
+.gasoleo-pill.info { color: var(--suave); }
+.gasoleo-formula { color: #b4c5d3; font-size: 13px; font-variant-numeric: tabular-nums; }
+.gasoleo-compartir.btn { margin-left: auto; background: var(--acento); color: var(--sobre-acento); border-color: var(--acento); }
+.gasoleo-compartir.btn:hover { background: #f3d100; border-color: #e0c000; }
+.gasoleo-mensaje { flex-basis: 100%; margin: 0; color: #d7e1e9; font-size: 14px; }
+.gasoleo-enlace { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; min-height: 44px; }
+
+/* Gráfica */
+.gasoleo-grafica h2 { font-size: 19px; margin-bottom: 8px; }
+.gasoleo-leyenda { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 8px; color: var(--suave); font-size: 13px; }
+.gasoleo-leyenda i { display: inline-block; width: 14px; height: 10px; margin-right: 6px; border-radius: 2px; vertical-align: -1px; }
+.gasoleo-leyenda i.linea { background: var(--gas-linea); }
+.gasoleo-leyenda i.ref { background: var(--gas-ref-suave); }
+.gasoleo-leyenda i.real { background: var(--gas-real-suave); }
+.gasoleo-svg { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.gasoleo-svg svg { display: block; }
+.gasoleo-svg text { fill: var(--suave); font-size: 11px; font-variant-numeric: tabular-nums; }
+.gasoleo-svg .banda.ref { fill: var(--gas-ref-suave); }
+.gasoleo-svg .banda.real { fill: var(--gas-real-suave); }
+.gasoleo-svg .rejilla { stroke: var(--borde); stroke-width: 1; }
+.gasoleo-svg .marca { stroke: var(--suave); }
+.gasoleo-svg .area { fill: var(--gas-linea); opacity: .08; }
+.gasoleo-svg .linea { fill: none; stroke: var(--gas-linea); stroke-width: 2; }
+.gasoleo-svg .punto { fill: var(--gas-linea); }
+
+/* Semanas utilizadas: tabla de verdad también en el móvil, con desplazamiento lateral */
+.gasoleo-tabla { overflow: auto; max-height: min(420px, 60vh); border: 1px solid var(--borde); border-radius: 10px; -webkit-overflow-scrolling: touch; }
+.gasoleo-tabla table { font-size: 13px; }
+.gasoleo-tabla thead th { position: sticky; top: 0; z-index: 1; padding: 8px 10px; white-space: nowrap; text-align: right; }
+.gasoleo-tabla td { padding: 6px 10px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.gasoleo-tabla th:first-child, .gasoleo-tabla td:first-child { text-align: left; }
+.gasoleo-tabla tr.en-ref td { background: var(--gas-ref-suave); }
+.gasoleo-tabla tr.en-real td { background: var(--gas-real-suave); }
+
+/* Cómo se calcula e información legal */
+.gasoleo-notas ul { display: grid; gap: 8px; margin: 0 0 16px; padding-left: 20px; }
+.gasoleo-notas, .gasoleo-legal { font-size: 15px; overflow-wrap: anywhere; }
+.gasoleo-tablas-c { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 14px; }
+.gasoleo-tablas-c td { padding: 8px 12px; }
+.gasoleo-legal h2 { font-size: 19px; }
+.gasoleo-refs { color: var(--suave); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+
+@media (max-width: 700px) {
+  .gasoleo-estado { gap: 12px 20px; }
+  .gasoleo-estado .btn { margin-left: 0; width: 100%; }
+  .gasoleo-resultado { padding: 20px; }
+  .gasoleo-compartir.btn { margin-left: 0; width: 100%; }
+  .gasoleo-tabla table { display: table; }
+  .gasoleo-tabla thead { display: table-header-group; }
+  .gasoleo-tabla tbody { display: table-row-group; }
+  .gasoleo-tabla tr { display: table-row; padding: 0; border: 0; }
+  .gasoleo-tabla th, .gasoleo-tabla td { display: table-cell; border-bottom: 1px solid #edf0f3; padding: 6px 10px; }
+}
+@media (prefers-reduced-motion: reduce) { .gasoleo-carga-barra span { animation: none; } }

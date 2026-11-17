@@ -51,3 +51,20 @@ def catalogo_odoo(buscar: str = Query("", max_length=100), externos: bool = Fals
     finally:
         cliente._http.close()
         cliente._anon.close()
+
+
+@router.get("/avisos-asignacion")
+def avisos_asignacion(u: Usuario = Depends(requiere_permiso("transporte.ver"))):
+    """Camiones propios sin chófer y chóferes del grupo sin camión, leídos de Odoo en directo (solo lectura)."""
+    _sesion_real(u)
+    from .config import get_settings
+    from .odoo_client import OdooClient
+    s = get_settings()
+    if s.mode != "real":
+        raise AppError("Los avisos de chóferes y camiones necesitan la conexión real con Odoo.", 503, "odoo_no_configurado")
+    cliente = OdooClient(s)
+    try:
+        return cliente.avisos_asignacion_flota()
+    finally:
+        cliente._http.close()
+        cliente._anon.close()

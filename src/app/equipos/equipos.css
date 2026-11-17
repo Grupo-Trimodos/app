@@ -1,0 +1,19 @@
+/* Equipos (/equipos): tarjetas de equipo con sus personas, pensadas para el móvil. */
+.equipo-titulo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.equipo-titulo h2 { margin: 0 auto 0 0; font-size: 20px; overflow-wrap: anywhere; }
+.equipo-personas { list-style: none; margin: 12px 0 0; padding: 0; }
+.equipo-personas li { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 6px 0; border-bottom: 1px solid var(--borde); }
+.equipo-personas li:last-child { border-bottom: 0; }
+.equipo-personas li > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.equipo-personas form { flex: none; margin: 0; }
+.equipo-anadir { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--borde); }
+.equipo-anadir h3 { margin: 0 0 8px; font-size: 16px; }
+.equipo-buscar label { font-weight: 400; font-size: 14px; color: var(--suave); }
+.equipo-buscar > div { display: flex; gap: 8px; margin-top: 6px; }
+.equipo-buscar input { flex: 1; min-width: 0; margin: 0; }
+.equipo-buscar .btn { flex: none; }
+.equipo-ajustes { margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--borde); }
+.equipo-ajustes > summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 600; color: var(--suave); }
+.equipo-seccion { margin: 28px 0 12px; font-size: 18px; }
+.equipo-archivados { margin-top: 28px; }
+.equipo-archivados > summary { min-height: 48px; display: flex; align-items: center; cursor: pointer; font-weight: 700; margin-bottom: 12px; }

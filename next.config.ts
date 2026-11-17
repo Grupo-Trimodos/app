@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 // La API Python (DECA y ARGON) vive en api/index.py. En local corre aparte con uvicorn (puerto 8000);
-// en Vercel es una función Python del mismo proyecto y recibe la ruta original (/api/deca, argon, rrhh, chofer, odoo).
+// en Vercel es una función Python del mismo proyecto y recibe la ruta original (/api/deca, argon, rrhh, chofer, flota, odoo, automatizaciones).
 // Toda ruta nueva de la API Python necesita aquí su rewrite (un test lo comprueba).
 const PY = process.env.NODE_ENV === "development" ? "http://127.0.0.1:8000" : "";
 
@@ -22,6 +22,7 @@ const nextConfig: NextConfig = {
         { source: "/api/chofer/:path*", destination: PY ? `${PY}/api/chofer/:path*` : "/api/" },
         { source: "/api/flota/:path*", destination: PY ? `${PY}/api/flota/:path*` : "/api/" },
         { source: "/api/odoo/:path*", destination: PY ? `${PY}/api/odoo/:path*` : "/api/" },
+        { source: "/api/automatizaciones/:path*", destination: PY ? `${PY}/api/automatizaciones/:path*` : "/api/" },
       ],
       fallback: [],
     };
@@ -37,12 +38,13 @@ const nextConfig: NextConfig = {
           { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" },
         ],
       },
-      // Administración, «Mi equipo», Ropa y Seguridad vuelven a la misma pestaña, centro y filtros leyendo de qué página viene la acción
+      // Administración, «Mi equipo», «Equipos», Ropa y Seguridad vuelven a la misma pestaña, centro y filtros leyendo de qué página viene la acción
       // (src/lib/volver.ts):
       // ahí el navegador dice su página de origen, pero solo dentro de la propia app (a otras webs, nunca).
       { source: "/admin", headers: [{ key: "Referrer-Policy", value: "same-origin" }] },
       { source: "/admin/:path*", headers: [{ key: "Referrer-Policy", value: "same-origin" }] },
       { source: "/equipo", headers: [{ key: "Referrer-Policy", value: "same-origin" }] },
+      { source: "/equipos", headers: [{ key: "Referrer-Policy", value: "same-origin" }] },
       { source: "/ropa", headers: [{ key: "Referrer-Policy", value: "same-origin" }] },
       { source: "/seguridad", headers: [{ key: "Referrer-Policy", value: "same-origin" }] },
       { source: "/deca/sw.js", headers: [{ key: "Cache-Control", value: "no-cache" }] },

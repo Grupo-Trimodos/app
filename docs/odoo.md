@@ -106,5 +106,83 @@ La comprobación fue por API real, sin escrituras; no se comparó con la pantall
 La revisión posterior del 16-11-2026 separa el catálogo externo de la **flota propia**: la consulta inicial usa
 `is_own_vehicle=true` y `company_owner_id` de las empresas configuradas. El catálogo anterior se conserva tras el permiso
 adicional `transporte.externos`; los contactos conductores no representan empleados.
+
+Avisos de asignación (17-11-2026, autorizado por Félix): en la vista «Flota propia», `/transporte` consulta también
+`/api/flota/avisos-asignacion` (`transporte.ver`, sesión real; `avisos_asignacion_flota`, solo `search_read`, `read` y
+`fields_get`). Camiones sin chófer: `fleet.vehicle` propio activo sin `driver_id` o cuyo `driver_id` es un contacto
+archivado (se lee `active` con `read`; sale con la nota «chófer dado de baja»), por `vehicle_type` y los remolques aparte.
+Chóferes sin camión: `res.partner` activo con `is_driver` con `parent_id child_of` el contacto de una empresa configurada
+(incluye los que cuelgan de un centro: STINSA SEVILLA, BURRIANA, VILA-REAL, SILLA, TARRAGONA; se excluye el contacto de
+la propia empresa) o con `employee_ids` en ellas, que no es `driver_id` de ningún vehículo propio activo (los de
+subcontratas no cuentan). La empresa de cada chófer se busca subiendo por los `parent_id` (`read`) y, si no cuelga de una
+empresa, por la `company_id` de su `hr.employee`. También: conductores con más de un vehículo y cuántos conductores no
+tienen ficha de empleado enlazada. Si Odoo falla, solo el bloque de avisos lo dice.
+
+Comprobación del 17-11-2026 (solo lecturas por API contra producción, `www.grupotrimodos.com`, base `prod`; **no hay Odoo
+de pruebas**: falta `.env.pruebas`, y por la regla 2 de `AGENTS.md` hay que avisar a Félix antes de desplegar):
+- El filtro anterior (`parent_id in`) daba 23 chóferes del grupo y 17 sin camión; dejaba fuera 65 contactos de los
+  centros de STINSA (25 SEVILLA, 23 BURRIANA, 8 SILLA, 7 VILA-REAL, 2 TARRAGONA), 4 de ellos con camión propio. Con
+  `child_of` salen 88 (89 menos el contacto de TRANSARGI, que tiene `is_driver` y es la propia empresa).
+- Resultado actual: 90 camiones propios activos; 10 sin chófer, todos de STINSA (9 cabezas tractoras sin `driver_id` y
+  9707HTM, cuyo conductor, el contacto 35657, está archivado y sin nombre); 0 de TRANSARGI. Chóferes sin camión: 78
+  (STINSA 68, TRANSARGI 10); 13 conductores con más de un vehículo; los 66 conductores de camiones propios activos no
+  tienen ficha de empleado enlazada.
+- **Sin comprobar:** no se han comparado estas cifras con la pantalla de Odoo (Flota y Contactos), ni por empresa. Las
+  pruebas automáticas (`tests/test_avisos_flota.py`) usan datos simulados y no sustituyen esa comparación.
 La organización se lee de `hr.employee`, `hr.department`, `hr.work.location` y `hr.job`, sin copias editables.
 Correspondencias y validación: [mapa-organizacion-odoo.md](mapa-organizacion-odoo.md).
+
+## Enlace de cada persona con Odoo por su móvil (17-11-2026)
+
+Autorizado por Félix. Funcionamiento y permisos: [acceso-y-perfiles.md](acceso-y-perfiles.md#enlace-con-odoo-por-el-móvil-17-11-2026).
+**No añade ninguna escritura en Odoo** (`ESCRITURAS` no cambia). Lo que cambia es **quién rellena
+`usuarios.odoo_employee_id`**, y de ese id salen los envíos de fichajes y ausencias. Por eso entra en las normas de
+`AGENTS.md` sobre integraciones con Odoo.
+
+**Qué alcanza:**
+- **Lecturas nuevas** (`odoo_client.py`, solo `search_read`, dominios fijos): `empleados_para_vincular` (`hr.employee`
+  activos de `ODOO_COMPANY_IDS`: nombre, empresa, departamento, puesto y `work_phone`, `mobile_phone`, `private_phone`)
+  y `conductores_para_vincular` (`res.partner` activos con `is_driver` del grupo, mismo criterio que los avisos de
+  flota: nombre, contacto padre, empresa, `phone`, `mobile`). Los teléfonos solo se comparan; la ruta nunca los devuelve
+  enteros (como mucho las 3 últimas cifras). La ruta `GET /api/odoo/vinculos/pendientes` exige `personas.vincular`.
+- **Envíos que dependen del enlace:** los mismos de antes, sin cambiar su código. Fichajes (`hr.attendance`: abrir y
+  cerrar asistencias) y ausencias aprobadas (`hr.leave`: crear la solicitud) se envían al `odoo_employee_id` de la
+  persona. Confirmar o deshacer un enlace cambia a qué ficha van **los envíos que salgan a partir de ese momento**.
+  `odoo_conductor_id` no se usa en ningún envío.
+- **Quién lo provoca:** el responsable o la administración al pulsar «Son la misma persona» o «Deshacer» en
+  `/equipo/odoo`. Siguen como antes el campo de Administración → Personas y el enlace automático por correo de trabajo o
+  código de credencial (`rrhh.empleado`); ahora, si cambian la ficha, el enlace queda sin confirmar y se anota.
+- **Registros que ya existen:** en Odoo, ninguno se toca. En la app, a 17-11-2026 ninguna persona tenía
+  `odoo_employee_id`.
+
+**Qué pasa con lo fichado antes de enlazar** (`servicios/rrhh.py` y `servicios/sincronizacion.py`, sin cambios):
+- Con `RRHH_DRY_RUN=true` (local y por defecto) todo queda «simulado» y no se reenvía nunca, haya enlace o no.
+- Con `RRHH_DRY_RUN=false` (producción), si la persona no tiene ficha, cada envío intenta encontrarla sola por su correo
+  de trabajo o su código (credencial `barcode`). Si hay exactamente una, la guarda (sin confirmar) y envía. Si no, sus
+  fichajes pendientes quedan como **«sin empleado»**, con el motivo. Las ausencias aprobadas, igual.
+- «Sin empleado» sigue en la cola: en cuanto la persona tiene ficha, el siguiente envío manda **todos** sus fichajes en
+  cola, del más antiguo al más nuevo y sin límite de antigüedad. Ese envío llega con su siguiente fichaje, con
+  «Reintentar» o con la pasada diaria (4:00 UTC), que también manda las ausencias aprobadas «sin empleado». Confirmar el
+  enlace no lanza ningún envío por sí mismo.
+- Cada fichaje antiguo crea o cierra su asistencia con la hora real de entonces, en UTC. Si en Odoo ya hay una entrada
+  abierta de esa ficha, o asistencias que se solapan (por ejemplo, fichadas en Odoo por otra vía), Odoo lo rechaza: queda
+  en «error» y los siguientes esperan detrás. Se arregla en Odoo y se reintenta. Una ausencia no se duplica si en Odoo
+  ya hay una viva de esa ficha con las mismas fechas.
+- Lo ya **enviado** a una ficha equivocada (por ejemplo, por un enlace automático erróneo) se queda en esa ficha. Deshacer
+  o cambiar el enlace no lo mueve; se corrige a mano en Odoo (`AGENTS.md`, norma 9).
+- Tras **deshacer**, la persona se queda sin ficha. El siguiente envío vuelve a buscarla por correo o código; si no la
+  encuentra, sus fichajes quedan «sin empleado».
+
+**Comprobación del 17-11-2026** (solo lecturas por API contra producción, Odoo 18, empresas 1 y 7; **no hay Odoo de
+pruebas**: falta `.env.pruebas`):
+- 129 fichas activas; 97 con algún teléfono (84 `work_phone`, 24 `mobile_phone`, 14 `private_phone`). Solo hay 39
+  números distintos: 7 se repiten en varias fichas y cubren 85 de ellas (teléfonos de centro). Simulando que cada ficha
+  con teléfono es una persona que da ese número, solo 29 reciben una propuesta segura de su propia ficha; el resto sale
+  como «está en varias fichas: compruébalo». **La mayoría de enlaces se decidirán por nombre y empresa, no por el
+  móvil**, hasta que Odoo tenga el móvil de cada persona.
+- 88 contactos conductores del grupo; 22 con teléfono; 8 de esos números están en alguna ficha de empleado (4 en una
+  sola).
+- **Sin comprobar:** no hay Odoo de pruebas. Por eso, ni enlazar una persona real y leer de vuelta un fichaje suyo en
+  Odoo (`AGENTS.md`, normas 2, 3 y 7), ni comparar estas cifras con la pantalla de Odoo. Antes de que los responsables
+  empiecen a confirmar enlaces en producción hay que avisar a Félix. Lo prudente: confirmar primero una sola persona,
+  dejar que fiche una vez, leer la asistencia en Odoo y comparar empleado, empresa y hora (UTC y Madrid) antes de seguir.

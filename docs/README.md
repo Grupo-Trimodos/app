@@ -12,6 +12,7 @@ Reglas y bases del proyecto: [`../AGENTS.md`](../AGENTS.md). Puesta en marcha: [
 | [movildata.md](movildata.md) | Centro de flota y Mi camión |
 | [deca.md](deca.md) | DECA: reglas y lecciones |
 | [argon.md](argon.md) | ARGON: pedidos de Carburos desde n8n |
+| [automatizaciones.md](automatizaciones.md) | Automatizaciones: cómo se añade una y la revisión del precio por gasóleo |
 | [otras-funciones.md](otras-funciones.md) | Seguridad, cuadro de mando, ropa, zonas y calendario (ocultas en el piloto) |
 | [nueva-funcion.md](nueva-funcion.md) | Cómo se añade una función (fuera del piloto) |
 | [scripts.md](scripts.md) | Para qué sirve cada script |

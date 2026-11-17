@@ -1,4 +1,5 @@
 import MiOrganizacion from "./MiOrganizacion";
+import PedirTelefono from "./PedirTelefono";
 import Link from "next/link";
 import AvisoJornada from "./AvisoJornada";
 import { leerFichajesJornada, jornadasPorPersona } from "@/lib/jornadas-servidor";
@@ -28,17 +29,19 @@ export const dynamic = "force-dynamic";
 const detalles: Record<string, { titulo: string; descripcion: string; etiqueta: string }> = {
   flota: { titulo: "Centro de flota", descripcion: "Localiza cada vehículo y consulta su última actividad en Movildata.", etiqueta: "OPERACIONES" },
   chofer: { titulo: "Mi camión", descripcion: "Confirma tu vehículo y gestiona tu jornada desde la cabina.", etiqueta: "EN CARRETERA" },
+  viajes: { titulo: "Mis viajes", descripcion: "Las órdenes de transporte de Odoo y en qué punto va cada carga y descarga.", etiqueta: "EN CARRETERA" },
   deca: { titulo: "Órdenes de transporte", descripcion: "Revisa la mercancía, actualiza la carga y descarga tu documentación.", etiqueta: "DECA" },
   fichaje: { titulo: "Fichaje", descripcion: "Registra tu entrada, tus pausas y la salida. Todo queda anotado.", etiqueta: "MI JORNADA" },
   ausencias: { titulo: "Vacaciones y ausencias", descripcion: "Solicita tus días y sigue la respuesta de tu responsable.", etiqueta: "MI TIEMPO" },
   equipo: { titulo: "Mi equipo", descripcion: "Consulta la jornada de tu equipo y atiende sus solicitudes.", etiqueta: "PERSONAS" },
+  equipos: { titulo: "Equipos", descripcion: "Grupos de trabajo con personas de cualquier centro o zona.", etiqueta: "PERSONAS" },
   ropa: { titulo: "Ropa de trabajo", descripcion: "Pide ropa y EPIs; tu responsable la aprueba y te la entrega.", etiqueta: "EQUIPACIÓN" },
   documentos: { titulo: "Mi documentación", descripcion: "Carnés, certificados y reconocimientos al día, con aviso antes de que caduquen.", etiqueta: "MIS PAPELES" },
   incidencias: { titulo: "Incidencias", descripcion: "Avisa de un accidente, un incidente o una avería y sigue su estado.", etiqueta: "AVISAR" },
   seguridad: { titulo: "Seguridad", descripcion: "ITV, documentación, carretillas, inspecciones de almacén e incidencias.", etiqueta: "PREVENCIÓN" },
   admin: { titulo: "Administración", descripcion: "Gestiona los accesos, los centros, los vehículos y la sincronización.", etiqueta: "GESTIÓN" },
 };
-const orden = ["organizacion", "transporte", "flota", "chofer", "deca", "fichaje", "ausencias", "ropa", "documentos", "incidencias", "equipo", "seguridad", "admin"];
+const orden = ["organizacion", "transporte", "flota", "chofer", "viajes", "deca", "fichaje", "ausencias", "ropa", "documentos", "incidencias", "equipo", "equipos", "seguridad", "admin"];
 
 type Indicador = { href: string; icono: string; titulo: string; valor: string; detalle: string; atencion?: boolean };
 
@@ -206,6 +209,8 @@ export default async function Inicio({ searchParams }: { searchParams: Promise<{
       {perfil?.activo && <Suspense fallback={null}><MiOrganizacion /></Suspense>}
       {ok && <p className="aviso" role="status">{ok}</p>}
       {error && <p className="error" role="alert">{error}</p>}
+      {/* Solo mientras no haya dado su móvil (para enlazar su cuenta con su ficha de Odoo). */}
+      {perfil?.activo && <Suspense fallback={null}><PedirTelefono volver="/" /></Suspense>}
 
       {!perfil || !perfil.activo ? <section className="panel inicio-sin-acceso"><Icono nombre="escudo" size={36} />
         <h2>Estamos preparando tu acceso</h2><p>Tu usuario está pendiente de activar. Avisa a la oficina para empezar a usar tus herramientas.</p>

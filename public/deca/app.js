@@ -536,6 +536,23 @@ $("btn-share").addEventListener("click", () => pdfAction(async (b) => {
 }));
 
 // ---------- arranque ----------
+// Abrir una orden concreta desde «Mis viajes» (src/app/viajes): /deca/?pedido=S2621473&empresa=stinsa. Busca igual que
+// escribir el número de pedido y elegir la empresa a mano (misma ruta y mismos permisos).
+function pedidoDeLaDireccion() {
+  const p = new URLSearchParams(location.search);
+  const pedido = (p.get("pedido") || "").trim().toUpperCase();
+  const empresa = (p.get("empresa") || "").trim().toLowerCase();
+  if (!/^S\d{5,9}$/.test(pedido) || !Object.prototype.hasOwnProperty.call(EMPRESAS, empresa)) return null;
+  return { pedido, empresa };
+}
+function abrirPedido({ pedido, empresa }) {
+  history.replaceState(null, "", location.pathname);   // al recargar o volver atrás no se repite la búsqueda
+  state.company = empresa;
+  for (const x of document.querySelectorAll(".seg-btn")) x.setAttribute("aria-checked", String(x.dataset.company === empresa));
+  setBrand(empresa, currentScreen);
+  $("order").value = pedido;
+  load({ order_name: pedido, company: empresa });
+}
 if ("serviceWorker" in navigator && window.isSecureContext) {
   window.addEventListener("load", () => navigator.serviceWorker.register("/deca/sw.js", { scope: "/deca/" }).catch(() => {}));
 }
@@ -552,6 +569,8 @@ $("btn-scan").addEventListener("click", () => go("scan"));
   try {
     const yo = await api("/api/deca/login", { method: "POST" });
     if (yo.nombre) { $("quien").textContent = "Has entrado como " + yo.nombre; $("quien").hidden = false; }
+    const abrir = pedidoDeLaDireccion();
+    if (abrir) abrirPedido(abrir);
   } catch (e) {
     if (e.code === "sin_permiso" || e.code === "usuario_inactivo") { $("btn-scan").disabled = true; showError(e.message); }
     /* sin conexión: se avisará al buscar */

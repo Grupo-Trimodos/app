@@ -1,0 +1,7 @@
+/* Avisos de asignación de la flota propia (/transporte) */
+.avisos-asignacion { margin-bottom: 24px; }
+.avisos-lista { list-style: none; margin: 0; padding: 0; }
+.avisos-lista li { padding: 10px 0; border-bottom: 1px solid var(--datos-linea); overflow-wrap: anywhere; }
+.avisos-lista li:last-child { border-bottom: 0; }
+.avisos-subtitulo { font-size: 13px; margin: 14px 0 4px; color: var(--suave); }
+.avisos-nota { font-size: 13px; color: var(--suave); margin: 16px 0 0; }

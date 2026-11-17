@@ -1,0 +1,3 @@
+/* Petición del móvil (src/app/PedirTelefono.tsx): resaltada mientras falta. */
+.pedir-telefono.pendiente { border: 2px solid var(--acento); }
+.pedir-telefono input[type="tel"] { font-size: 20px; letter-spacing: .02em; }
