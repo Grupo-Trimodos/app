@@ -135,3 +135,23 @@ export function madridAInstante(local: string): Date | null {
   const desfase = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute) - supuesto;
   return new Date(supuesto - desfase);
 }
+
+/** Presentación del reloj; no altera imputación, registro ni envíos de las jornadas. */
+export function presentarJornada(resumen: ReturnType<typeof calcularJornada>, ahora: Date) {
+  const hoy = diaMadrid(ahora);
+  const lunes = new Date(`${hoy}T12:00:00Z`);
+  lunes.setUTCDate(lunes.getUTCDate() - (lunes.getUTCDay() + 6) % 7);
+  const semana = lunes.toISOString().slice(0, 10);
+  const ultima = resumen.jornadas.at(-1);
+  const nocturna = !resumen.actual && ultima?.salida && ultima.dia !== hoy
+    && diaMadrid(ultima.salida.momento) === hoy && ultima.incidencias.length === 0;
+  const actualIncluida = !!resumen.actual && !resumen.actual.pendiente && !resumen.actual.incidencias.length
+    && resumen.actual.dia >= semana && resumen.actual.dia <= hoy;
+  return {
+    etiqueta: resumen.actual ? "Llevas en esta jornada" : nocturna ? "Última jornada" : "Trabajado hoy",
+    minutos: nocturna ? ultima.minutos : resumen.minutosVisibles,
+    entrada: nocturna ? ultima.entrada.momento : null,
+    minutosSemana: resumen.minutosSemana + (actualIncluida ? resumen.actual!.minutos : 0),
+    actualIncluida,
+  };
+}

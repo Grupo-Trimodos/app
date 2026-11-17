@@ -104,3 +104,49 @@ def test_recuentos_filtran_empresas_y_no_devuelven_dominios(monkeypatch):
     r = c.estructura_organizacion()
     assert r["plantilla"] == 4 and r["sin_responsable"] == 1
     assert "__domain" not in str(r)
+
+@pytest.mark.parametrize("permisos,codigo", [((),403), (("organizacion.ver",),403), (("fichaje.fichar",),403)])
+def test_mapa_no_expone_fichas_con_permiso_de_recuentos(monkeypatch, permisos, codigo):
+    import servicios.auth as auth
+    monkeypatch.setattr(auth, "supabase_configurado", lambda: True)
+    monkeypatch.setattr(auth, "usuario_actual", lambda t: Usuario("u", "U", permisos))
+    monkeypatch.setattr(org, "conexion", lambda *a: pytest.fail("No consultar Odoo sin permiso"))
+    assert TestClient(app).get("/api/odoo/mapa-empleados", headers={"Authorization":"Bearer x"}).status_code == codigo
+
+
+def test_mapa_sin_sesion(monkeypatch):
+    import servicios.auth as auth
+    monkeypatch.setattr(auth, "supabase_configurado", lambda: True)
+    assert TestClient(app).get("/api/odoo/mapa-empleados").status_code == 401
+
+
+def test_mapa_lista_cerrada_y_avisos_sin_deducir_zona(monkeypatch):
+    c = OdooClient(replace(get_settings(), company_ids=[7]))
+    def llamada(modelo, metodo, args, kwargs):
+        assert metodo == "search_read"
+        assert ["company_id", "in", [7]] in args[0]
+        if modelo == "hr.work.location":
+            return [{"id":2,"name":"Vacía","company_id":[7,"B"]}]
+        assert ["active","=",True] in args[0]
+        assert set(kwargs['fields']) == {'name','company_id','work_location_id','department_id','job_id','parent_id','mobile_phone','work_phone','work_email'}
+        return [{"id":1,"name":"Persona","company_id":[7,"B"],"department_id":[4,"Sevilla"],"mobile_phone":"  ","salary":999,"private_phone":"secreto"}]
+    monkeypatch.setattr(c,"_call",llamada)
+    try:
+        d=c.mapa_empleados()
+        p=d['personas'][0]
+        assert p['zona'] is None
+        assert p['faltan'] == ['Ubicación de trabajo','Teléfono de trabajo']
+        assert p['completar'] == ['Puesto','Responsable']
+        assert 'salary' not in str(d) and 'secreto' not in str(d)
+        assert len(d['zonas']) == 1  # conserva ubicaciones vacías
+    finally:
+        c._http.close(); c._anon.close()
+
+
+def test_mapa_no_presenta_lectura_truncada_como_completa(monkeypatch):
+    c=OdooClient(get_settings())
+    monkeypatch.setattr(c,"_call",lambda *a,**k: [{}]*2001)
+    try:
+        with pytest.raises(AppError): c.mapa_empleados()
+    finally:
+        c._http.close(); c._anon.close()

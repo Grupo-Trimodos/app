@@ -21,7 +21,7 @@ type Fila = {
   odoo_employee_id: number | null;
   usuario_perfil: { id: number; perfil_id: number; centro_id: number | null }[];
 };
-type Busqueda = { ok?: string; error?: string; ver?: string; q?: string; centro?: string; perfil?: string; estado?: string; pag?: string };
+type Busqueda = { cuenta?: string; ok?: string; error?: string; ver?: string; q?: string; centro?: string; perfil?: string; estado?: string; pag?: string };
 const POR_PAGINA = 50;
 
 /** Con qué cuenta entra: la de la empresa es de Microsoft; cualquier otro correo, de Google. */
@@ -146,7 +146,8 @@ async function Personas({ sp, perfiles, centros, esAdmin }: { sp: Busqueda; perf
   const q = (sp.q ?? "").trim().toLowerCase();
   const filtroCentro = Number(sp.centro) || null, filtroPerfil = Number(sp.perfil) || null;
   const filtradas = usuarios.filter((u) =>
-    (!q || [u.nombre, u.email, u.codigo].some((x) => x?.toLowerCase().includes(q)))
+    (!sp.cuenta || u.id === sp.cuenta)
+    && (!q || [u.nombre, u.email, u.codigo].some((x) => x?.toLowerCase().includes(q)))
     && (!filtroCentro || u.usuario_perfil.some((a) => a.centro_id === filtroCentro))
     && (!filtroPerfil || u.usuario_perfil.some((a) => a.perfil_id === filtroPerfil))
     && (sp.estado === "inactivos" ? !u.activo : sp.estado === "configurar" ? sinPerfil(u) : sp.estado === "sin_centro" ? sinCentro(u)
@@ -162,6 +163,7 @@ async function Personas({ sp, perfiles, centros, esAdmin }: { sp: Busqueda; perf
   const cuenta = (pf: number) => usuarios.filter((u) => u.activo && u.usuario_perfil.some((a) => a.perfil_id === pf)).length;
 
   return <>
+    <p><Link className="btn primario" href="/admin/mapa">Mapa de zonas y fichas de Odoo →</Link></p>
     <div className="admin-resumen">
       {puestos.map((p) => <Link key={p.id} href={`/admin?ver=personas&perfil=${p.id}`} className="admin-resumen-cifra">
         <b>{cuenta(p.id)}</b><span>{p.nombre}</span></Link>)}
@@ -220,7 +222,7 @@ async function Personas({ sp, perfiles, centros, esAdmin }: { sp: Busqueda; perf
           <td>{u.activo ? <span className="etiqueta ok">Activa</span> : <span className="etiqueta">Desactivada</span>}
             {u.es_admin && <span className="etiqueta" style={{ marginLeft: 6 }}>Superadmin</span>}
             {!u.odoo_employee_id && !u.es_admin && <span className="etiqueta pronto" style={{ marginLeft: 6 }} title="Sin enlazar con su ficha de empleado: sus fichajes no llegan a Odoo">Sin Odoo</span>}</td>
-          <td><details className="admin-editar">
+          <td><details className="admin-editar" open={sp.cuenta === u.id}>
             <summary>Editar</summary>
             <form action={cambiarPuesto} className="fila-form">
               <input type="hidden" name="id" value={u.id} />

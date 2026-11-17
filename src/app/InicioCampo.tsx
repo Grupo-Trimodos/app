@@ -1,14 +1,14 @@
 import { Suspense } from "react";
 import MiOrganizacion from "./MiOrganizacion";
 import Link from "next/link";
-import AvisoJornada from "./AvisoJornada";
+import RelojJornada from "./RelojJornada";
 import { leerFichajesJornada } from "@/lib/jornadas-servidor";
 import EstadoOdoo from "./EstadoOdoo";
 import Icono, { ICONOS_AREA } from "./Icono";
-import { fichar, reintentarOdoo } from "./fichaje/acciones";
+import { reintentarOdoo } from "./fichaje/acciones";
 import { confirmarDotacion } from "./ropa/acciones";
 import {
-  BOTON_TIPO, duracion, calcularJornada, hora, inicioSemana, NOMBRE_ESTADO, SIGUIENTES,
+  calcularJornada, hora, inicioSemana,
   type Fichaje,
 } from "@/lib/jornada";
 import { misPendientes } from "@/lib/pendientes";
@@ -39,7 +39,7 @@ export default async function InicioCampo({ nombre, ok, error }: { nombre: strin
 
   const fichajes = (registro?.data ?? []) as Fichaje[];
   const resumen = calcularJornada(fichajes);
-  const { estado, minutosVisibles: minutosHoy, minutosSemana } = resumen;
+  const { estado } = resumen;
   const ultimo = fichajes.at(-1);
   const sinEnviar = fichajes.some((f) => ["pendiente", "error", "sin_empleado"].includes(f.odoo_estado));
   const matricula = camion?.data?.vehiculos?.matricula;
@@ -71,29 +71,22 @@ export default async function InicioCampo({ nombre, ok, error }: { nombre: strin
       <h1>{saludo}{nombre ? `, ${nombre.split(/[ @]/)[0]}` : ""}</h1>
       <p><span>{hoyTexto}</span></p>
     </div>
-    <Suspense fallback={null}><MiOrganizacion /></Suspense>
     {ok && <p className="aviso" role="status">{ok}</p>}
     {error && <p className="error" role="alert">{error}</p>}
 
     {registro && <section className={`campo-jornada ${estado}`} aria-labelledby="campo-jornada-t">
       <h2 id="campo-jornada-t" className="sr-only">Mi jornada</h2>
-      <span className={`inicio-estado ${registro.error ? "" : estado}`}><i />{registro.error ? "Sin datos de jornada" : NOMBRE_ESTADO[estado]}</span>
-      <p className="campo-jornada-tiempo">{registro.error ? "—" : duracion(minutosHoy)}</p>
-      <p className="campo-jornada-sub">{estado === "fuera" ? "Trabajado hoy" : "Llevas en esta jornada"} · semana cerrada {duracion(minutosSemana)}</p>
+      <RelojJornada fichajes={fichajes} instante={ahora.toISOString()} error={!!registro.error} permitirFichar={esDeSuPuesto("fichaje.fichar")} volver="/" />
       {esDeSuPuesto("chofer.usar") && <Link href="/chofer" className={`campo-camion ${matricula ? "" : "falta"}`}>
         <Icono nombre="camion" size={20} /><span>{matricula ? <>Camión <b>{matricula}</b></> : "Confirma tu camión al subir a la cabina"}</span>
         <Icono nombre="flecha" size={18} /></Link>}
-      <AvisoJornada resumen={resumen} error={!!registro?.error} />
-      <div className="campo-botones">
-        {esDeSuPuesto("fichaje.fichar") ? (registro?.error ? [] : SIGUIENTES[estado]).map((t, i) => <form key={t} action={fichar}>
-          <input type="hidden" name="tipo" value={t} /><input type="hidden" name="volver" value="/" />
-          <button className={`btn ancho grande ${i === 0 ? "primario" : "campo-secundario"}`}>{BOTON_TIPO[t]}</button>
-        </form>) : <Link className="btn ancho grande primario" href="/chofer">Ir a mi camión</Link>}
-      </div>
+      {!esDeSuPuesto("fichaje.fichar") && <Link className="btn ancho grande primario" href="/chofer">Ir a mi camión</Link>}
       {ultimo && <p className="campo-jornada-ultimo">Último fichaje a las {hora(ultimo.momento)} <EstadoOdoo estado={ultimo.odoo_estado} error={ultimo.odoo_error} /></p>}
       {sinEnviar && <form action={reintentarOdoo}><input type="hidden" name="volver" value="/" />
         <button className="btn ancho pequeno campo-secundario">Reintentar envío a Odoo</button></form>}
     </section>}
+
+    <Suspense fallback={null}><MiOrganizacion /></Suspense>
 
     {avisos.length > 0 && <section className="campo-avisos" aria-label="Tienes pendiente">
       {avisos.map((t) => <Link key={t.id} href={t.href} className="campo-aviso">

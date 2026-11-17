@@ -72,3 +72,47 @@ test('Madrid: se conservan las conversiones en las noches de cambio de hora', ()
   assert.equal(j.madridAInstante('2026-03-29T06:00').toISOString(), '2026-03-29T04:00:00.000Z');
   assert.equal(j.madridAInstante('2026-10-25T06:00').toISOString(), '2026-10-25T05:00:00.000Z');
 });
+
+test('presentación: al terminar un turno nocturno se ve su duración sin moverla de semana', () => {
+  const ahora = new Date('2026-11-09T08:00:00+01:00');
+  const r = calcular([['entrada','2026-11-08T22:00:00+01:00'], ['salida','2026-11-09T06:00:00+01:00']], ahora.toISOString());
+  const v = j.presentarJornada(r, ahora);
+  assert.equal(v.etiqueta, 'Última jornada');
+  assert.equal(v.minutos, 480);
+  assert.equal(v.minutosSemana, 0);
+  assert.equal(r.minutosHoy, 0);
+});
+test('presentación: el reloj avanza, descuenta pausas e incluye el tramo abierto en la semana', () => {
+  const pares = [['entrada','2026-11-10T08:00:00Z'], ['pausa','2026-11-10T09:00:00Z'], ['reanudar','2026-11-10T09:30:00Z']];
+  for (const [instante, minutos] of [['2026-11-10T10:00:00Z',90], ['2026-11-10T10:15:00Z',105]]) {
+    const ahora = new Date(instante);
+    const r = calcular(pares, instante), v = j.presentarJornada(r, ahora);
+    assert.equal(v.minutos, minutos);
+    assert.equal(v.minutosSemana, minutos);
+    assert.equal(v.actualIncluida, true);
+    assert.equal(r.minutosSemana, 0);
+  }
+});
+test('presentación: congelar a las 16 horas excluye la jornada pendiente de la semana', () => {
+  const ahora = new Date('2026-11-11T00:00:00Z');
+  const r = calcular([['entrada','2026-11-10T08:00:00Z']], ahora.toISOString());
+  const v = j.presentarJornada(r, ahora);
+  assert.equal(v.minutos, 960);
+  assert.equal(v.actualIncluida, false);
+  assert.equal(v.minutosSemana, 0);
+  assert.deepEqual(j.SIGUIENTES[r.estado], []);
+});
+test('presentación: jornada abierta del domingo no suma a la semana del lunes', () => {
+  const ahora = new Date('2026-11-09T02:00:00+01:00');
+  const r = calcular([['entrada','2026-11-08T22:00:00+01:00']], ahora.toISOString());
+  const v = j.presentarJornada(r, ahora);
+  assert.equal(v.minutos, 240);
+  assert.equal(v.actualIncluida, false);
+  assert.equal(v.minutosSemana, 0);
+});
+test('presentación: no presentar como última jornada válida un turno con incidencias', () => {
+  const ahora = new Date('2026-11-10T08:00:00+01:00');
+  const r = calcular([['entrada','2026-11-09T22:00:00+01:00'], ['entrada','2026-11-09T23:00:00+01:00'], ['salida','2026-11-10T06:00:00+01:00']], ahora.toISOString());
+  assert.equal(j.presentarJornada(r, ahora).minutos, 0);
+  assert.equal(r.incidencias.length, 1);
+});

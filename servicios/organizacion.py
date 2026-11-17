@@ -90,3 +90,10 @@ def mi_organizacion(u: Usuario = Depends(requiere_permiso(None))):
         ficha = c.organizacion_personal(int(empleado))
     return {"ficha": ficha, "aviso": None if ficha else "Tu ficha no está disponible en las empresas configuradas.",
             "consultado": datetime.now(timezone.utc).isoformat()}
+
+
+@router.get("/mapa-empleados")
+def mapa_empleados(u: Usuario = Depends(requiere_permiso("admin.usuarios"))):
+    with conexion(u) as c:
+        datos = c.mapa_empleados()
+    return {**datos, "consultado": datetime.now(timezone.utc).isoformat()}

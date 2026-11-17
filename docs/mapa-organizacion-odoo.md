@@ -149,3 +149,40 @@ Transporte muestra matrícula, modelo, empresa y conductor en una tabla que se a
 La búsqueda sigue consultando Odoo; la paginación de veinte filas solo organiza los resultados recibidos.
 Las cifras son «En esta consulta», no totales de toda la flota. Los contactos externos conservan su permiso adicional.
 Los cambios son de presentación: no alteran consultas, escrituras, permisos ni configuración de Odoo.
+
+## Mapa administrativo de personas (17-11-2026)
+
+`/admin/mapa`, accesible desde Administración → Personas, requiere `admin.usuarios` tanto en la página como en
+`/api/odoo/mapa-empleados`. El permiso de recuentos `organizacion.ver` no da acceso a nombres ni teléfonos.
+Se aplica la autorización de Félix para consultar Odoo real. No hay escrituras en Odoo, nuevos permisos ni migraciones.
+
+El mapa es organizativo, por `hr.work.location`, sin inventar coordenadas ni deducir ubicaciones del puesto o del
+nombre del departamento. Conserva ubicaciones vacías y separa los empleados sin ubicación. Los filtros de empresa,
+búsqueda y datos pendientes afectan a los recuentos de las tarjetas. Seleccionar una persona abre su ficha de trabajo.
+
+La lectura cerrada incluye nombre, empresa, ubicación, departamento, puesto, responsable, móvil/teléfono/correo de
+trabajo. No incluye DNI, dirección particular, datos de salud, salarios ni documentos. Se avisa si faltan nombre,
+empresa, ubicación o ambos teléfonos de trabajo; departamento, puesto y responsable son avisos informativos.
+Que haya teléfono no acredita titularidad, unicidad ni capacidad de recibir SMS. El alta por SMS sigue pendiente.
+
+La cuenta se relaciona exclusivamente por `odoo_employee_id`, nunca por similitud de nombre o teléfono. Se detectan
+cuentas sin vínculo y varias cuentas vinculadas al mismo empleado. El enlace «Revisar cuenta» lleva a la persona exacta
+por su ID y abre el formulario existente; no activa ni empareja automáticamente. Si falla la lectura de cuentas no
+se muestra «sin cuenta» como si fuera un dato confirmado. Las cuentas se leen paginadas para evitar falsos negativos.
+
+Los datos actuales se leen en cada carga, sin caché ni copia editable. El enlace a Odoo permite que quien tenga acceso
+corrija allí la ficha; recargar el mapa obtiene las correcciones. Consultas de más de 2.000 empleados o ubicaciones
+fallan de forma explícita, sin presentar un mapa parcial como completo.
+
+Comprobación de lectura real: 129 empleados (109 empresa 1, 20 empresa 7), 27 ubicaciones; 78 empleados sin ubicación y
+37 sin ninguno de los dos teléfonos de trabajo. Los recuentos de carencias se solapan. No se han modificado fichas.
+
+Validación de este bloque: 244 pruebas Python correctas y 11 omitidas, 28 pruebas web correctas, TypeScript y build
+correctos. Las pruebas nuevas verifican denegación a usuarios sin permiso administrativo, sesión obligatoria,
+lista cerrada de campos, empresas, ubicaciones vacías, avisos y rechazo de resultados truncados.
+Los diagnósticos generales `comprobar_compatibilidad` y `comprobar_permisos` se ejecutaron en real con la autorización
+vigente, pero terminaron en `OdooRechazo` al revisar permisos. El primero también detectó que las credenciales no abren
+sesión web para el PDF. No se alteraron esos comprobadores. La consulta nueva del mapa sí devolvió los datos anteriores.
+La previsualización interactiva con datos ficticios se preparó fuera del proyecto; el navegador automatizado quedó sin
+contenido visible, por lo que no se da por comprobada la interacción ni la comparación visual con Odoo por empresa.
+Pendiente esa comprobación antes de publicar. Sin escrituras reales, no hay IDs de escritura que leer de vuelta.

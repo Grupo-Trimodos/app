@@ -41,3 +41,17 @@ instalada o falla la lectura, se muestra el error y las acciones no permiten fic
 
 **Pruebas:** `npm run test:jornada` (Node 22.6 o posterior), suite Python y compilación de la web. La comprobación real de
 la migración y las operaciones simultáneas se ejecuta con `scripts.prueba_jornadas_db`, descrito en `docs/scripts.md`.
+
+## Reloj y acciones en móvil (17-11-2026)
+
+InicioCampo y Fichaje comparten `RelojJornada`. Se recalcula cada 15 segundos desde el instante del servidor, con
+`calcularJornada`; respeta pausas y el bloqueo a las 16 horas. Al volver a una pestaña se refrescan los datos.
+El servidor sigue validando cada acción: el reloj no escribe fichajes ni decide la hora que se guarda.
+
+`presentarJornada` distingue el turno nocturno terminado hoy («Última jornada») sin cambiar su imputación al día de
+entrada. «Esta semana» incluye la jornada abierta solo si pertenece a esa semana, no está pendiente de cierre y no
+tiene incidencias; lo indica debajo del total. Los totales cerrados utilizados por las otras pantallas no cambian.
+
+«Terminar jornada» aparece primero y requiere confirmación. El botón de envío se desactiva mientras se guarda.
+«Mi empresa y mi equipo» queda debajo del bloque de fichaje para que su carga no desplace los botones. Los estados y
+los errores del envío a Odoo siguen visibles. Este cambio no modifica acciones de servidor, migraciones ni integración.

@@ -508,6 +508,38 @@ class OdooClient:
                 "plantilla": sum(g["personas"] for g in grupos["company_id"]),
                 "sin_responsable": self._call("hr.employee", "search_count", [dominio + [["parent_id", "=", False]]])}
 
+    def mapa_empleados(self) -> dict:
+        """Lectura administrativa cerrada: datos de trabajo, nunca ficha privada completa."""
+        empleados = self._call("hr.employee", "search_read", [[
+            ["active", "=", True], ["company_id", "in", self.s.company_ids]]], {
+            "fields": ["name", "company_id", "work_location_id", "department_id", "job_id",
+                       "parent_id", "mobile_phone", "work_phone", "work_email"],
+            "order": "name,id", "limit": 2001})
+        zonas = self._call("hr.work.location", "search_read", [[
+            "|", ["company_id", "=", False], ["company_id", "in", self.s.company_ids]]], {
+            "fields": ["name", "company_id"], "order": "name,id", "limit": 2001})
+        if len(empleados) > 2000 or len(zonas) > 2000:
+            raise AppError("El mapa supera el límite de consulta. Avisa a administración para ampliarlo.", 503, "mapa_incompleto")
+        personas = []
+        for e in empleados:
+            ficha = {"id": e["id"], "nombre": e.get("name") or "Sin nombre"}
+            for destino, campo in (("empresa", "company_id"), ("zona", "work_location_id"),
+                                   ("departamento", "department_id"), ("puesto", "job_id"),
+                                   ("responsable", "parent_id")):
+                ident, nombre = _m2o(e.get(campo))
+                ficha[destino] = {"id": ident, "nombre": nombre} if ident else None
+            for destino, campo in (("movil", "mobile_phone"), ("telefono", "work_phone"), ("correo", "work_email")):
+                ficha[destino] = (e.get(campo) or "").strip()
+            ficha["faltan"] = [etiqueta for etiqueta, presente in (
+                ("Nombre", (e.get("name") or "").strip()), ("Empresa", e.get("company_id")),
+                ("Ubicación de trabajo", e.get("work_location_id")),
+                ("Teléfono de trabajo", ficha["movil"] or ficha["telefono"])) if not presente]
+            ficha["completar"] = [etiqueta for etiqueta, campo in (
+                ("Departamento", "department_id"), ("Puesto", "job_id"), ("Responsable", "parent_id")) if not e.get(campo)]
+            personas.append(ficha)
+        return {"personas": personas, "zonas": [{"id": z["id"], "nombre": z["name"],
+            "empresa": _m2o(z.get("company_id"))[1]} for z in zonas], "odoo_url": self.s.odoo_url.rstrip("/")}
+
     def organizacion_personal(self, empleado_id: int) -> dict | None:
         """El llamador obtiene el empleado del vínculo autenticado, nunca del navegador."""
         filas = self._call("hr.employee", "search_read", [[["id", "=", empleado_id],

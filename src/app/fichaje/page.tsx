@@ -1,13 +1,13 @@
 import OrigenDato from "../OrigenDato";
-import AvisoJornada from "../AvisoJornada";
+import RelojJornada from "../RelojJornada";
 import { leerFichajesJornada } from "@/lib/jornadas-servidor";
 import Cabecera from "../Cabecera";
 import EstadoOdoo from "../EstadoOdoo";
 import { conPermiso } from "@/lib/usuario";
 import {
-  BOTON_TIPO, duracion, calcularJornada, fecha, hora, inicioDia, NOMBRE_ESTADO, NOMBRE_TIPO, SIGUIENTES,
+  duracion, calcularJornada, fecha, hora, inicioDia, NOMBRE_TIPO,
 } from "@/lib/jornada";
-import { fichar, reintentarOdoo } from "./acciones";
+import { reintentarOdoo } from "./acciones";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Fichaje · Grupo Trimodos" };
@@ -17,7 +17,7 @@ export default async function PaginaFichaje({ searchParams }: { searchParams: Pr
   const { ok, error } = await searchParams;
   const { data: todos, error: errorLeer } = await leerFichajesJornada(supabase, uid, inicioDia(7));
   const resumen = calcularJornada(todos);
-  const { estado, minutosVisibles: llevas } = resumen;
+  const { estado } = resumen;
   const hoy = todos.filter((f) => new Date(f.momento).getTime() >= inicioDia().getTime());
   const pendientes = todos.some((f) => f.odoo_estado === "error" || f.odoo_estado === "pendiente");
   const historico = resumen.jornadas.filter((j) => new Date(j.entrada.momento) >= inicioDia(7) || !j.salida);
@@ -32,18 +32,7 @@ export default async function PaginaFichaje({ searchParams }: { searchParams: Pr
         {error && <p className="error" role="alert">{error}</p>}
 
         <section className={`panel estado-jornada ${estado}`}>
-          <p className="hint">Ahora mismo</p>
-          <p className="estado-grande">{errorLeer ? "Sin datos de jornada" : NOMBRE_ESTADO[estado]}</p>
-          <p>{estado === "fuera" ? "Hoy has trabajado" : "Llevas"} <b>{errorLeer ? "—" : duracion(llevas)}</b></p>
-          <AvisoJornada resumen={resumen} error={!!errorLeer} />
-          <div className="botones-fichar">
-            {(errorLeer ? [] : SIGUIENTES[estado]).map((t, i) => (
-              <form key={t} action={fichar}>
-                <input type="hidden" name="tipo" value={t} />
-                <button className={`btn ancho grande ${i === 0 ? "primario" : ""}`}>{BOTON_TIPO[t]}</button>
-              </form>
-            ))}
-          </div>
+          <RelojJornada fichajes={todos} instante={new Date().toISOString()} error={!!errorLeer} />
         </section>
 
         <section className="panel">
