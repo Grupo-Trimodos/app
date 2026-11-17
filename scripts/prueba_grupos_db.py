@@ -159,6 +159,21 @@ def main():
         assert not falla(10, "insert into public.departamentos(nombre) values ('Tráfico');")
         print('OK: departamentos, tipos de transporte y pertenencias solo los cambia la administración', flush=True)
 
+        # Cola de fichas: RLS, inmutabilidad y bloqueo de ediciones simultáneas.
+        solicitud = '11111111-1111-1111-1111-111111111111'
+        alta = f"insert into public.odoo_ediciones_empleados(id,autor,empleado_id,antes,cambios,modo) values ('{solicitud}','{uid(10)}',1,'{{}}','{{}}','prueba');"
+        sql('set role service_role; ' + alta)
+        assert valor(10, 'select count(*) from public.odoo_ediciones_empleados;') == '1'
+        assert valor(1, 'select count(*) from public.odoo_ediciones_empleados;') == '0'
+        assert falla(10, alta.replace(solicitud, '22222222-2222-2222-2222-222222222222'))
+        assert sql('set role service_role; ' + alta.replace(solicitud, '22222222-2222-2222-2222-222222222222'), bien=False).returncode != 0
+        assert sql("set role service_role; update public.odoo_ediciones_empleados set cambios='{\"name\":\"Otro\"}';", bien=False).returncode != 0
+        sql("set role service_role; update public.odoo_ediciones_empleados set estado='simulado';")
+        assert sql("set role service_role; update public.odoo_ediciones_empleados set estado='pendiente';", bien=False).returncode != 0
+        assert sql('set role service_role; delete from public.odoo_ediciones_empleados;', bien=False).returncode != 0
+        assert sql('set role authenticated; truncate public.odoo_ediciones_empleados;', bien=False).returncode != 0
+        print('OK: cola de fichas restringida, solicitudes inmutables y sin reenvío de procesadas', flush=True)
+
         # Sin sesión no se lee nada.
         r = sql("set role anon; select count(*) from public.fichajes;", bien=False)
         assert r.returncode != 0 or r.stdout.strip() == '0', 'Alguien sin sesión ha leído fichajes'

@@ -23,6 +23,7 @@ LECTURA = {"search_read", "read", "read_group", "search", "search_count", "name_
 
 # Lista cerrada de servicios/odoo_client.py: fichajes, ausencias, notas y bultos/peso de DECA.
 ESCRITURAS_APP = {
+    ("hr.employee", "write"),         # Autorización expresa de Félix, 17-11-2026: ocho campos de trabajo.
     ("tms.package", "write"),          # DECA: bultos, euro palets, mercancía y peso (solo EDITABLE_FIELDS)
     ("project.task", "message_post"),  # DECA: nota en la tarea de la orden
     ("hr.attendance", "create"),       # fichaje: abrir asistencia
@@ -53,7 +54,7 @@ def test_los_metodos_de_lectura_no_esconden_ninguna_escritura():
     assert set(METODOS_LECTURA) == LECTURA
 
 
-@pytest.mark.parametrize("modelo", ["hr.employee", "fleet.vehicle", "hr.payslip", "account.move.line", "tms.equipment", "stock.quant"])
+@pytest.mark.parametrize("modelo", ["hr.department", "fleet.vehicle", "hr.payslip", "account.move.line", "tms.equipment", "stock.quant"])
 def test_se_puede_leer_cualquier_modelo_pero_no_escribirlo(modelo):
     assert all(permitido(modelo, m) for m in LECTURA)
     assert not any(permitido(modelo, m) for m in ("create", "write", "unlink", "copy", "action_confirm", "toggle_active"))
@@ -84,7 +85,7 @@ def test_deca_solo_imprime_su_orden_de_transporte():
 
 
 @pytest.mark.parametrize("modelo,metodo", [
-    ("res.partner", "write"), ("hr.employee", "write"), ("hr.leave", "write"), ("hr.attendance", "unlink"),
+    ("res.partner", "write"), ("res.company", "write"), ("hr.leave", "write"), ("hr.attendance", "unlink"),
     ("tms.package", "unlink"), ("tms.package", "create"), ("account.move", "create"), ("sale.order", "write"),
 ])
 def test_el_cliente_de_la_app_rechaza_escrituras_fuera_de_lista_sin_llegar_a_odoo(modelo, metodo, monkeypatch):

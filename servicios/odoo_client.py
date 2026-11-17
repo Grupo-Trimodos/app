@@ -41,6 +41,7 @@ PACKAGE_FIELDS = [
 ]
 ATTACHMENT_FIELDS = ["res_model", "res_id", "access_token", "name"]
 EDITABLE_FIELDS = frozenset({"goods_id", "number_of_packages", "euro_pallet_qty", "shipping_weight"})
+CAMPOS_EMPLEADO_EDITABLES = frozenset({"name", "mobile_phone", "work_phone", "work_email", "work_location_id", "department_id", "job_id", "parent_id"})
 REPORT_NAME = "tms_reporting.tms_transportation_order"
 
 # ---- Qué se puede hacer en Odoo (AGENTS.md, base 4) ---------------------------------------------------------------
@@ -52,6 +53,7 @@ METODOS_LECTURA = frozenset({"search_read", "read", "read_group", "search", "sea
 # ESCRIBIR: SOLO esta lista cerrada, cada entrada con lo que toca y la única función que la usa. Borrar (unlink), nunca.
 # Ampliarla exige permiso expreso de Félix (procedimiento en docs/odoo.md); la prueba de escrituras falla si crece.
 ESCRITURAS = {
+    (EMPLOYEE_MODEL, "write"): "Autorizado Félix 17-11-2026: ocho campos de trabajo, vía editar_ficha_empleado y cola de sincronización",
     (PACKAGE_MODEL, "write"): "DECA: mercancía, bultos, euro palets y peso de un bulto (solo EDITABLE_FIELDS), vía write_package",
     (TASK_MODEL, "message_post"): "DECA: nota en la tarea de la orden de transporte, vía post_note",
     (ATTENDANCE_MODEL, "create"): "Fichaje: abrir la asistencia de un empleado (employee_id, check_in), vía abrir_asistencia",
@@ -77,7 +79,7 @@ EXPECTED_PERMISSIONS = [
     (ATTENDANCE_MODEL, "read", True), (ATTENDANCE_MODEL, "create", True), (ATTENDANCE_MODEL, "write", True),
     (ATTENDANCE_MODEL, "unlink", False),
     (LEAVE_MODEL, "create", True), (LEAVE_MODEL, "unlink", False),
-    (EMPLOYEE_MODEL, "read", True), (EMPLOYEE_MODEL, "write", False), (EMPLOYEE_MODEL, "unlink", False),
+    (EMPLOYEE_MODEL, "read", True), (EMPLOYEE_MODEL, "write", True), (EMPLOYEE_MODEL, "unlink", False),
     (CRM_MODEL, "read", True), (INVOICE_MODEL, "read", True),   # cuadro de mando (solo lectura)
     (ORDER_LINE_MODEL, "read", True), (MOVE_LINE_MODEL, "read", True),                 # finanzas y centros (solo lectura)
     (ANALYTIC_ACCOUNT_MODEL, "read", True), (ANALYTIC_TAG_MODEL, "read", True),        # catálogo analítico (solo lectura)
@@ -539,6 +541,44 @@ class OdooClient:
             personas.append(ficha)
         return {"personas": personas, "zonas": [{"id": z["id"], "nombre": z["name"],
             "empresa": _m2o(z.get("company_id"))[1]} for z in zonas], "odoo_url": self.s.odoo_url.rstrip("/")}
+
+    def ficha_editable_empleado(self, empleado: int) -> dict:
+        filas = self._call(EMPLOYEE_MODEL, "search_read", [[
+            ["id", "=", empleado], ["active", "=", True], ["company_id", "in", self.s.company_ids]]],
+            {"fields": sorted(CAMPOS_EMPLEADO_EDITABLES) + ["company_id", "write_date"], "limit": 1})
+        if not filas:
+            raise AppError("La ficha no está disponible en las empresas configuradas.", 404, "sin_ficha")
+        f = filas[0]
+        return {"id": f["id"], "version": f["write_date"], "empresa": _m2o(f.get("company_id"))[0],
+                "valores": {k: (_m2o(f.get(k))[0] or False) if k.endswith("_id") else (f.get(k) or "")
+                            for k in CAMPOS_EMPLEADO_EDITABLES}}
+
+    def opciones_edicion_empleado(self, empresa: int) -> dict:
+        resultado = {}
+        for campo, modelo in (("work_location_id", "hr.work.location"), ("department_id", "hr.department"),
+                              ("job_id", "hr.job"), ("parent_id", "hr.employee")):
+            dominio = [["company_id", "=", empresa]] if campo == "parent_id" else ["|", ["company_id", "=", False], ["company_id", "=", empresa]]
+            filas = self._call(modelo, "search_read", [dominio], {"fields": ["name"], "order": "name,id", "limit": 2001})
+            if len(filas) > 2000:
+                raise AppError("Hay demasiadas opciones para editar esta ficha con seguridad.", 503)
+            resultado[campo] = [{"id": f["id"], "nombre": f["name"]} for f in filas]
+        return resultado
+
+    def editar_ficha_empleado(self, empleado: int, cambios: dict, antes: dict) -> dict:
+        if not cambios or set(cambios) - CAMPOS_EMPLEADO_EDITABLES:
+            raise AppError("Hay campos que no se pueden editar desde la app.", 400)
+        actual = self.ficha_editable_empleado(empleado)
+        if actual["version"] != antes["version"] or actual["valores"] != antes["valores"]:
+            raise AppError("La ficha ha cambiado en Odoo. Recárgala y revisa los cambios.", 409, "conflicto")
+        opciones = self.opciones_edicion_empleado(actual["empresa"])
+        for k, v in cambios.items():
+            if k.endswith("_id") and v and (v not in [f["id"] for f in opciones[k]] or (k == "parent_id" and v == empleado)):
+                raise AppError("La selección no es válida para la empresa de esta persona.", 400)
+        self._call(EMPLOYEE_MODEL, "write", [[empleado], {k: v or False for k, v in cambios.items()}])
+        vuelta = self.ficha_editable_empleado(empleado)
+        if any(vuelta["valores"][k] != v for k, v in cambios.items()):
+            raise AppError("Odoo ha respondido, pero los datos leídos no coinciden. Revisa la ficha antes de volver a enviar.", 409, "lectura_distinta")
+        return vuelta
 
     def organizacion_personal(self, empleado_id: int) -> dict | None:
         """El llamador obtiene el empleado del vínculo autenticado, nunca del navegador."""

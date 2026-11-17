@@ -1,0 +1,23 @@
+"use client";
+import { useState } from "react";
+import { leerEditor, guardarEditor, type FichaEdicion } from "./acciones";
+const campos = {name:"Nombre",mobile_phone:"Móvil de trabajo",work_phone:"Teléfono de trabajo",work_email:"Correo de trabajo",work_location_id:"Ubicación",department_id:"Departamento",job_id:"Puesto",parent_id:"Responsable"};
+export default function EditorEmpleado({empleado}:{empleado:number}) {
+  const [historial,setHistorial]=useState<FichaEdicion["historial"]>([]);
+  const [ficha,setFicha]=useState<FichaEdicion|null>(null);
+  const [ocupado,setOcupado]=useState(false);
+  const [mensaje,setMensaje]=useState("");
+  const [solicitud,setSolicitud]=useState("");
+  const [revision,setRevision]=useState<{datos:Record<string,unknown>;real:boolean}|null>(null);
+  async function abrir(){setOcupado(true);setMensaje("");try{const r=await leerEditor(empleado);setFicha(r.datos);setHistorial(r.datos?.historial||[]);setMensaje(r.error||"");setSolicitud(crypto.randomUUID());setRevision(null);}catch{setMensaje("No se pudo cargar la ficha. Inténtalo de nuevo.");}finally{setOcupado(false);}}
+  async function enviar(){if(!revision||!ficha)return;setOcupado(true);try{const r=await guardarEditor(empleado,{...revision,solicitud,version:ficha.version});setMensaje(r.error||r.datos?.error||({enviado:"Cambios guardados y comprobados en Odoo.",simulado:"Prueba registrada. No se ha modificado Odoo.",sin_cambios:"No hay cambios que guardar.",enviando:"Envío en curso. Revisa su estado antes de repetir."}[r.datos?.estado||""]||"Solicitud registrada."));if(r.datos){setHistorial([{id:r.datos.id,creado:new Date().toISOString(),estado:r.datos.estado,error:r.datos.error},...historial]);setFicha(null);setRevision(null);}}catch{setMensaje("No se pudo confirmar el resultado. Revisa el historial antes de volver a enviar.");}finally{setOcupado(false);}}
+  return <section className="editor-empleado"><h3>Editar ficha en la app</h3><p>Solo datos de trabajo. La empresa y los datos privados no se modifican aquí.</p><button className="btn ancho" disabled={ocupado} onClick={abrir}>{ocupado ? "Consultando…" : ficha ? "Recargar ficha de Odoo" : "Editar datos de trabajo"}</button>
+    {mensaje && <p role="status" className="aviso">{mensaje}</p>}
+    {ficha && !revision && <form onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);const datos=Object.fromEntries(Object.keys(campos).map(k=>[k,k.endsWith("_id") ? (Number(f.get(k))||null) : String(f.get(k)||"")]));setRevision({datos,real:f.get("real")==="on"});}}>
+      {Object.entries(campos).map(([k,n])=><label key={k}>{n}{k.endsWith("_id") ? <select name={k} defaultValue={String(ficha.valores[k]||"")}><option value="">Sin indicar</option>{ficha.valores[k] && !(ficha.opciones[k]||[]).some(o=>o.id===ficha.valores[k]) && <option value={String(ficha.valores[k])}>Actual: #{ficha.valores[k]} (fuera del catálogo)</option>}{(ficha.opciones[k]||[]).filter(o=>k!=="parent_id"||o.id!==empleado).map(o=><option key={o.id} value={o.id}>{o.nombre}</option>)}</select> : <input name={k} required={k==="name"} maxLength={k==="name"?200:k==="work_email"?254:80} type={k==="work_email"?"email":"text"} defaultValue={String(ficha.valores[k]||"")} />}</label>)}
+      <label className="mapa-check"><input type="checkbox" name="real" />Enviar estos cambios al Odoo real. Sin marcar, solo se registra una prueba.</label><button className="btn primario ancho">Revisar cambios</button>
+    </form>}
+    {ficha && revision && <div><h4>Antes de guardar</h4><ul>{Object.entries(revision.datos).filter(([k,v])=>String(v||"").trim()!==String(ficha.valores[k]||"")).map(([k,v])=>{const nombre=(valor:unknown)=>k.endsWith("_id") ? ficha.opciones[k]?.find(o=>o.id===valor)?.nombre||"Sin indicar" : String(valor||"Sin indicar");return <li key={k}><b>{campos[k as keyof typeof campos]}</b>: {nombre(ficha.valores[k])} → {nombre(v)}</li>;})}</ul><p>{revision.real ? "Se modificará la ficha real de Odoo." : "Modo prueba: no se cambiará la ficha de Odoo."}</p><button className="btn primario ancho" disabled={ocupado} onClick={enviar}>{ocupado?"Guardando…":revision.real?"Confirmar y guardar en Odoo":"Registrar prueba"}</button><button className="btn ancho" disabled={ocupado} onClick={()=>setRevision(null)}>Volver a editar</button></div>}
+    {historial.length>0 && <details><summary>Últimos cambios enviados desde la app</summary><ul>{historial.map(h=><li key={h.id}>{new Date(h.creado).toLocaleString("es-ES")} · {h.estado}{h.error && <p className="error">{h.error}</p>}<small>Referencia: {h.id}</small></li>)}</ul></details>}
+  </section>;
+}

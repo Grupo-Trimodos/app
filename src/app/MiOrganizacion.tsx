@@ -1,11 +1,13 @@
+import Link from "next/link";
 import { llamarPythonDetalle } from "@/lib/python";
 import OrigenDato from "./OrigenDato";
 
 type Ficha = { empresa: string | null; area: string | null; ubicacion: string | null; puesto: string | null; responsable: string | null };
-export default async function MiOrganizacion() {
+export default async function MiOrganizacion({ abierto = false }: { abierto?: boolean } = {}) {
   const { datos, error } = await llamarPythonDetalle<{ ficha: Ficha | null; aviso: string | null }>("/api/odoo/mi-organizacion");
-  return <details className="panel mi-organizacion">
+  return <details className="panel mi-organizacion" open={abierto}>
     <summary>Mi empresa y mi equipo</summary>
+    {!abierto && <p><Link href="/perfil">Abrir mi perfil →</Link></p>}
     {error && <p className="hint">{error}</p>}
     {datos?.aviso && <p className="hint">{datos.aviso}</p>}
     {datos?.ficha && <>

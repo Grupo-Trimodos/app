@@ -33,6 +33,9 @@ TIEMPO_MAX = 20     # segundos por pasada (Vercel corta a los 30): lo que falte 
 PENDIENTES = "in.(pendiente,error,sin_empleado)"
 
 MAPAS = [
+    {"id": "fichas_empleados", "nombre": "Ediciones de fichas", "app_odoo": "hr", "nombre_app": "Empleados",
+     "modelo": "hr.employee", "sentido": "app_a_odoo", "que_hace": "Envía ocho campos de trabajo desde la cola odoo_ediciones_empleados y comprueba su lectura de vuelta.",
+     "pausado": "Envío manual desde el perfil: requiere revisar y confirmar cada edición."},
     {"id": "empleados", "nombre": "Fichas de empleado", "app_odoo": "hr", "nombre_app": "Empleados",
      "modelo": "hr.employee", "sentido": "odoo_a_app",
      "que_hace": "Enlaza a cada persona con su ficha de empleado de Odoo por su correo de trabajo o su código de credencial."},
@@ -240,3 +243,25 @@ def estado(u: Usuario = Depends(con_permiso)):
         "errores": errores,
         "ultima": ultima[0] if ultima else None,
     }
+
+
+def enviar_edicion_empleado(solicitud: str) -> dict:
+    """Mapa fichas_empleados: envío manual, sin reintentos automáticos ni reenvío de solicitudes procesadas."""
+    filas = supa.leer(supa.SERVICIO, "odoo_ediciones_empleados", {"id": f"eq.{solicitud}", "select": "*"})
+    if not filas:
+        raise AppError("No se ha encontrado la solicitud de edición.", 404)
+    fila = filas[0]
+    if fila["estado"] != "pendiente":
+        return {"id": solicitud, "estado": fila["estado"], "error": fila.get("error")}
+    if not supa.actualizar(supa.SERVICIO, "odoo_ediciones_empleados", {"id": f"eq.{solicitud}", "estado": "eq.pendiente"}, {"estado": "enviando"}):
+        return {"id": solicitud, "estado": "enviando", "error": None}
+    resultado = {"estado": "simulado", "error": None, "terminado": datetime.now(timezone.utc).isoformat()}
+    c = _odoo()
+    try:
+        if fila["modo"] == "real":
+            lectura = c.editar_ficha_empleado(fila["empleado_id"], fila["cambios"], fila["antes"])
+            resultado.update(estado="enviado", lectura=lectura)
+    except Exception as e:
+        resultado.update(estado="error", error=e.message if isinstance(e, AppError) else "No se pudo confirmar el resultado. Revisa Odoo antes de volver a enviar.")
+    supa.actualizar(supa.SERVICIO, "odoo_ediciones_empleados", {"id": f"eq.{solicitud}", "estado": "eq.enviando"}, resultado)
+    return {"id": solicitud, "estado": resultado["estado"], "error": resultado["error"]}

@@ -1,10 +1,12 @@
 {
   "_comentario": "Catálogo ÚNICO de áreas y permisos. Cada función nueva añade aquí su área y sus permisos: aparecen solos en el editor de perfiles y en el menú. Los mismos identificadores se usan en la base de datos (RLS) y en la API Python (requiere_permiso). «de_puesto»: permiso para el trabajo propio (fichar, su camión, la flota…); solo pone su área en el menú si viene de los perfiles de la persona, no por ser superadministrador. Los demás son de gestión o dirección.",
   "areas": [
+    {"id":"perfil", "nombre":"Mi perfil", "ruta":"/perfil", "descripcion":"Consultar la ficha propia y su equipo.", "permisos":[{"id":"perfil.ver", "nombre":"Acceso directo a su propio perfil", "de_puesto":true}]},
     {
       "id": "organizacion", "nombre": "Organización", "ruta": "/organizacion",
       "descripcion": "Estructura y recuentos de Odoo, y correspondencia con los centros de la app.",
       "permisos": [
+        { "id": "organizacion.editar", "nombre": "Editar datos de trabajo de empleados en Odoo (requiere gestionar usuarios)" },
         { "id": "organizacion.ver", "nombre": "Consultar la estructura y los recuentos de todas las empresas configuradas en Odoo (todos los centros, sin fichas personales)" }
       ]
     },

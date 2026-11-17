@@ -163,7 +163,7 @@ async function Personas({ sp, perfiles, centros, esAdmin }: { sp: Busqueda; perf
   const cuenta = (pf: number) => usuarios.filter((u) => u.activo && u.usuario_perfil.some((a) => a.perfil_id === pf)).length;
 
   return <>
-    <p><Link className="btn primario" href="/admin/mapa">Mapa de zonas y fichas de Odoo →</Link></p>
+    <p><Link className="btn primario" href="/organizacion">Mapa de zonas y fichas de Odoo →</Link></p>
     <div className="admin-resumen">
       {puestos.map((p) => <Link key={p.id} href={`/admin?ver=personas&perfil=${p.id}`} className="admin-resumen-cifra">
         <b>{cuenta(p.id)}</b><span>{p.nombre}</span></Link>)}

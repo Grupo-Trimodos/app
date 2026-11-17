@@ -292,10 +292,10 @@ def test_chofer_hoy_detecta_camion_de_la_flota_en_modo_simulado(entorno):
 
 def test_cliente_real_solo_escribe_lo_previsto_de_rrhh():
     from servicios.odoo_client import ESCRITURAS
-    # RRHH solo abre y cierra asistencias y crea solicitudes de ausencia; empleados, tipos y flota solo se leen
+    # Autorización de Félix 17-11-2026: se añade la edición cerrada de fichas, por su propia cola.
     assert {c for c in ESCRITURAS if c[0].startswith("hr.")} == {
-        ("hr.attendance", "create"), ("hr.attendance", "write"), ("hr.leave", "create")}
-    assert not any(c[0] in ("hr.employee", "hr.leave.type", "fleet.vehicle", "ir.module.module") for c in ESCRITURAS)
+        ("hr.attendance", "create"), ("hr.attendance", "write"), ("hr.leave", "create"), ("hr.employee", "write")}
+    assert not any(c[0] in ("hr.leave.type", "fleet.vehicle", "ir.module.module") for c in ESCRITURAS)
 
 
 def test_entrada_con_otra_entrada_abierta_en_odoo_queda_en_error(entorno):
@@ -372,7 +372,7 @@ def test_sincronizacion_se_salta_lo_que_no_tiene_su_aplicacion_en_odoo(entorno, 
     assert r["fichajes"]["estado"] == "ok"
     estado = c.get("/api/odoo/estado", headers={"Authorization": "Bearer tok-jefa"}).json()
     assert {m["id"]: m["instalada"] for m in estado["mapas"]} == {
-        "empleados": True, "fichajes": True, "ausencias": False, "vehiculos": False}
+        "empleados": True, "fichajes": True, "ausencias": False, "vehiculos": False, "fichas_empleados": True}
 
 
 def test_con_odoo_simulado_no_se_guardan_empleados_ni_camiones_de_prueba(entorno, monkeypatch):
