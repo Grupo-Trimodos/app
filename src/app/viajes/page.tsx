@@ -47,8 +47,11 @@ function Tarjeta({ o, primera }: { o: OrdenChofer; primera: boolean }) {
     </form>}
 
     <div className="viaje-acciones">
-      {deca ? <a className="btn ancho" href={deca}><Icono nombre="documento" size={20} />Abrir en DECA</a>
-        : <p className="hint">Para corregir la carga en DECA, busca el pedido {o.pedido ?? "de esta orden"}.</p>}
+      {deca ? <a className="btn ancho" href={deca}><Icono nombre="documento" size={20} />Abrir en DECA</a> : <>
+        <a className="btn ancho" href="/deca/"><Icono nombre="documento" size={20} />Abrir DECA</a>
+        <p className="hint">{o.pedido && o.empresa && !o.deca_por_pedido ? `El pedido ${o.pedido} tiene varias órdenes de transporte. ` : ""}En DECA, escanea el
+          código QR de esta orden ({o.nombre}) para abrir justo esta.</p>
+      </>}
       <details className="viaje-incidencia">
         <summary className="btn ancho"><Icono nombre="aviso" size={20} />Incidencia</summary>
         <form action={marcarIncidencia}>

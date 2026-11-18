@@ -216,6 +216,18 @@ def _es_remolque(clave: str, etiqueta: str) -> bool:
     return "remolque" in texto or "trailer" in texto
 
 
+# Enlace de cada persona con su ficha (servicios/organizacion.py y servicios/rrhh.py). Solo teléfonos de empresa: el
+# privado de la ficha (`private_phone`) no se lee nunca.
+CAMPOS_TELEFONO_EMPRESA = ("mobile_phone", "work_phone")
+
+
+def campo_correo_extra() -> str | None:
+    """ODOO_CAMPO_CORREO (p. ej. «x_correo_app», un campo propio de la ficha): otro campo donde buscar el correo con el
+    que entra la persona, además del correo de trabajo. Solo un nombre de campo válido."""
+    extra = (os.environ.get("ODOO_CAMPO_CORREO") or "").strip()
+    return extra if re.fullmatch(r"x_[a-z0-9_]{1,60}|private_email", extra) else None
+
+
 class OdooClient:
     def __init__(self, settings: Settings):
         self.s = settings
@@ -521,8 +533,8 @@ class OdooClient:
         if correo:   # =ilike sin comodines: «_» y «%» del correo se escapan
             literal = correo.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
             dominio = [["work_email", "=ilike", literal]]
-            extra = (os.environ.get("ODOO_CAMPO_CORREO") or "").strip()
-            if re.fullmatch(r"x_[a-z0-9_]{1,60}|private_email", extra):   # solo un nombre de campo válido
+            extra = campo_correo_extra()
+            if extra:
                 dominio = ["|", dominio[0], [extra, "=ilike", literal]]
         elif credencial:
             dominio = [["barcode", "=", credencial]]
@@ -664,9 +676,12 @@ class OdooClient:
     # ---- enlace de cada persona de la app con Odoo (solo lectura, dominios fijos) ------------------------------
     # Los teléfonos leídos solo sirven para comparar en servicios/organizacion.py: nunca salen enteros de la API.
     def empleados_para_vincular(self) -> list[dict]:
-        """Fichas de empleado activas de las empresas configuradas, con lo justo para reconocer a la persona."""
+        """Fichas de empleado activas de las empresas configuradas, con lo justo para reconocer a la persona. Solo
+        teléfonos de empresa (nunca `private_phone`) y los mismos correos que busca `buscar_empleado`."""
+        extra = campo_correo_extra()
         filas = self._call(EMPLOYEE_MODEL, "search_read", [[["active", "=", True], ["company_id", "in", self.s.company_ids]]], {
-            "fields": ["name", "company_id", "department_id", "job_id", "work_phone", "mobile_phone", "private_phone"],
+            "fields": ["name", "company_id", "department_id", "job_id", *CAMPOS_TELEFONO_EMPRESA, "work_email",
+                       *([extra] if extra else [])],
             "order": "name,id", "limit": 2001})
         if len(filas) > 2000:
             raise AppError("Hay demasiadas fichas de empleado para proponer enlaces. Avisa a administración.", 503, "vinculos_incompletos")
@@ -681,7 +696,7 @@ class OdooClient:
         filas = self._call("res.partner", "search_read", [[
             ["active", "=", True], ["is_driver", "=", True], ["id", "not in", contactos],
             "|", ["parent_id", "child_of", contactos], ["employee_ids.company_id", "in", ids]]], {
-            "fields": ["name", "parent_id", "company_id", "phone", "mobile"], "order": "name,id", "limit": 2001})
+            "fields": ["name", "parent_id", "company_id", "phone", "mobile", "email"], "order": "name,id", "limit": 2001})
         if len(filas) > 2000:
             raise AppError("Hay demasiados contactos conductores para proponer enlaces. Avisa a administración.", 503, "vinculos_incompletos")
         return filas
@@ -699,6 +714,23 @@ class OdooClient:
         filas = self._call(TASK_MODEL, "search_read", [dominio_viajes([conductor], self._ids_empresa(), tarea=tarea)],
                            {"fields": CAMPOS_VIAJE, "limit": 1})
         return filas[0] if filas else None
+
+    def tareas_que_abre_deca(self, pedidos: list[int]) -> dict[int, int]:
+        """Para cada pedido de venta, la orden que abre DECA al buscarlo por número (misma regla que find_transport_tasks:
+        primero las marcadas como orden de transporte, luego la más reciente). Un pedido puede tener varias órdenes."""
+        ids = sorted({int(p) for p in pedidos if int(p) > 0})
+        if not ids:
+            return {}
+        filas = self._call(TASK_MODEL, "search_read", [[
+            ["sale_order_id", "in", ids], "|", "|", ["is_transport_order", "=", True],
+            ["tms_transport_order_attachment_id", "!=", False], ["tms_package_ids", "!=", False]]],
+            {"fields": ["sale_order_id"], "order": "is_transport_order desc, id desc", "limit": 2000})
+        abre: dict[int, int] = {}
+        for f in filas:
+            pedido = _m2o(f.get("sale_order_id"))[0]
+            if pedido is not None:
+                abre.setdefault(pedido, f["id"])
+        return abre
 
     def vehiculos_flota(self) -> list[dict]:
         rows = self._call(FLEET_MODEL, "search_read", [[["active", "=", True]]],

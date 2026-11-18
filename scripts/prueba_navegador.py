@@ -142,6 +142,20 @@ def main():
             comprobar(pg2.is_hidden("#btn-review"), "no se ofrece «Revisar cambios» cuando no hay nada que cambiar")
             ctx2.close()
 
+            print("Abrir una orden desde «Mis viajes» (/deca/?pedido=…&empresa=…)")
+            ctx5 = navegador.new_context(viewport={"width": 390, "height": 844})
+            pg5 = ctx5.new_page()
+            pg5.add_init_script("Object.defineProperty(navigator, 'mediaDevices', {value: undefined})")
+            pg5.goto(BASE + "?pedido=s2621473&empresa=TRANSARGI")
+            pg5.wait_for_selector("#s-edit:not([hidden])", timeout=20000)
+            comprobar("S2621473" in pg5.inner_text("#edit-title") and pg5.evaluate("document.body.dataset.company") == "transargi",
+                      "el enlace de «Mis viajes» abre directamente esa orden con su empresa")
+            comprobar(pg5.evaluate("location.search") == "", "y limpia la dirección: al recargar no vuelve a buscarla")
+            pg5.goto(BASE + "?pedido=hola&empresa=otra"); pg5.wait_for_selector("#modo:not([hidden])")
+            pg5.wait_for_selector("#quien:not([hidden])")
+            comprobar(pg5.is_visible("#s-menu") and pg5.is_hidden("#s-edit"), "un enlace con datos no válidos no busca nada")
+            ctx5.close()
+
             print("Umbral de peso: lo manda el servidor")
             ctx3 = navegador.new_context(viewport={"width": 390, "height": 844})
             pg3 = ctx3.new_page()

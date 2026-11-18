@@ -139,8 +139,16 @@ def mis_viajes(u: Usuario) -> dict:
     en_curso = [f["odoo_task_id"] for f in empezadas if f.get("usuario_id") == u.id]
     with conexion() as c:
         filas = c.ordenes_de_conductores([conductor], _hoy(), en_curso, LIMITE_CHOFER)
-    limitado = len(filas) > LIMITE_CHOFER
-    ordenes = [ficha_orden(t) for t in filas[:LIMITE_CHOFER]]
+        limitado = len(filas) > LIMITE_CHOFER
+        filas = filas[:LIMITE_CHOFER]
+        # DECA busca por número de pedido y abre la orden más reciente de ese pedido; un pedido puede tener varias
+        # (medido el 17-11-2026: 16 de 50). El enlace directo solo se ofrece si DECA abriría justo esta.
+        abre = c.tareas_que_abre_deca([p for p in (_id(t.get("sale_order_id")) for t in filas) if p])
+    ordenes = []
+    for t in filas:
+        o = ficha_orden(t)
+        o["deca_por_pedido"] = bool(o["empresa"] and o["pedido"] and abre.get(_id(t.get("sale_order_id"))) == t["id"])
+        ordenes.append(o)
     pasos: dict[int, list[dict]] = {}
     if ordenes:
         for p in supa.leer(token, "viajes_estados", {

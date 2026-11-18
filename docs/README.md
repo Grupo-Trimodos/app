@@ -11,6 +11,7 @@ Reglas y bases del proyecto: [`../AGENTS.md`](../AGENTS.md). Puesta en marcha: [
 | [odoo.md](odoo.md) | Sincronización con Odoo y lecturas del cuadro de mando |
 | [movildata.md](movildata.md) | Centro de flota y Mi camión |
 | [deca.md](deca.md) | DECA: reglas y lecciones |
+| [viajes.md](viajes.md) | Mis viajes: órdenes de transporte del chófer, pasos de carga y descarga y seguimiento |
 | [argon.md](argon.md) | ARGON: pedidos de Carburos desde n8n |
 | [automatizaciones.md](automatizaciones.md) | Automatizaciones: cómo se añade una y la revisión del precio por gasóleo |
 | [otras-funciones.md](otras-funciones.md) | Seguridad, cuadro de mando, ropa, zonas y calendario (ocultas en el piloto) |

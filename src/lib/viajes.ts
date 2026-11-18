@@ -35,7 +35,8 @@ export type Orden = {
   referencia_carga: string | null; referencia_cliente: string | null; remolque: string | null; servicio_descarga: boolean;
   emitida: string | null; aprobada: boolean; etapa: string | null;
 };
-export type OrdenChofer = Orden & { pasos: PasoMarcado[]; siguiente: Paso | null; terminado: boolean };
+/** deca_por_pedido: DECA, al buscar el pedido, abriría justo esta orden (un pedido puede tener varias). */
+export type OrdenChofer = Orden & { pasos: PasoMarcado[]; siguiente: Paso | null; terminado: boolean; deca_por_pedido: boolean };
 export type MisViajes = { enlazado: boolean; aviso: string | null; ordenes: OrdenChofer[]; limitado: boolean; consultado: string };
 export type OrdenSeguimiento = Orden & {
   persona: { id: string; nombre: string }; estado: Estado | null; momento: string | null; incidencias: number;
@@ -55,8 +56,9 @@ export function horaPaso(iso: string) {
   return dia(d) === dia(new Date()) ? hora : `${d.toLocaleDateString("es-ES", { timeZone: ZONA, day: "numeric", month: "short" })}, ${hora}`;
 }
 
-/** Enlace a DECA con la orden ya buscada (pedido de venta y empresa). Null si DECA no la puede abrir así. */
-export function enlaceDeca(o: Pick<Orden, "pedido" | "empresa">) {
-  if (!o.pedido || !o.empresa || !/^S\d{5,9}$/.test(o.pedido)) return null;
+/** Enlace a DECA con la orden ya buscada (pedido de venta y empresa). Null si DECA no la puede abrir así: sin pedido, o
+ *  el pedido tiene otra orden más reciente y DECA abriría esa (entonces se abre escaneando el QR de la orden). */
+export function enlaceDeca(o: Pick<OrdenChofer, "pedido" | "empresa" | "deca_por_pedido">) {
+  if (!o.deca_por_pedido || !o.pedido || !o.empresa || !/^S\d{5,9}$/.test(o.pedido)) return null;
   return `/deca/?pedido=${encodeURIComponent(o.pedido)}&empresa=${o.empresa}`;
 }

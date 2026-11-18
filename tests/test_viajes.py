@@ -129,6 +129,20 @@ def test_el_cliente_de_odoo_solo_lee_tareas_con_el_dominio_fijo():
         assert not any(campo in f for f in CAMPOS_VIAJE)
 
 
+def test_que_orden_abre_deca_por_pedido_sigue_la_misma_regla_que_deca():
+    class Falso(OdooClient):
+        def __init__(self):
+            self.s = type("S", (), {"company_ids": [1, 7]})()
+
+        def _call(self, model, method, args, kwargs=None):
+            assert (model, method) == ("project.task", "search_read")
+            assert kwargs["order"] == "is_transport_order desc, id desc"   # = find_transport_tasks
+            assert args[0][0] == ["sale_order_id", "in", [3, 4]]
+            return [{"id": 9, "sale_order_id": [3, "S1"]}, {"id": 8, "sale_order_id": [3, "S1"]}, {"id": 5, "sale_order_id": [4, "S2"]}]
+    assert Falso().tareas_que_abre_deca([4, 3, 3, 0]) == {3: 9, 4: 5}
+    assert Falso().tareas_que_abre_deca([]) == {}
+
+
 # ---- pasos ----------------------------------------------------------------------------------------------------
 
 def test_el_siguiente_paso_va_en_orden_y_las_incidencias_no_cuentan():
@@ -192,6 +206,10 @@ class OdooFalso:
         self.pedidas.append(("lista", sorted(conductores), sorted(incluir or [])))
         return [{**TAREA, "driver_id": [c, "X"], "id": 77 + i} for i, c in enumerate(sorted(conductores))]
 
+    def tareas_que_abre_deca(self, pedidos):
+        self.pedidas.append(("deca", sorted(pedidos)))
+        return {3: 77}
+
     def orden_de_conductor(self, conductor, tarea):
         self.pedidas.append(("una", conductor, tarea))
         return {**TAREA, "id": tarea} if tarea == 77 and conductor == 900 else None
@@ -251,13 +269,22 @@ def test_el_conductor_sale_del_enlace_y_no_de_fuera(con_sesion, monkeypatch, odo
     leidas = supabase(monkeypatch, pasos=[{"odoo_task_id": 77, "estado": "llegada_carga", "nota": None, "momento": "2026-11-17T06:00:00Z"}])
     r = TestClient(app).get("/api/chofer/viajes?conductor=901&driver_id=901&conductores=901&usuario_id=otro", headers=CAB)
     assert r.status_code == 200
-    assert odoo.pedidas == [("lista", [900], [12])]          # su enlace; y de lo empezado, solo lo suyo
+    assert odoo.pedidas == [("lista", [900], [12]), ("deca", [3])]   # su enlace; y de lo empezado, solo lo suyo
     usuarios = next(p for t, p in leidas if t == "usuarios")
     assert usuarios["id"] == "eq.yo"
     estados = next(p for t, p in leidas if t == "viajes_estados")
     assert estados["usuario_id"] == "eq.yo" and estados["odoo_task_id"] == "in.(77)"
     [o] = r.json()["ordenes"]
     assert o["id"] == 77 and o["siguiente"] == "cargando" and not o["terminado"] and len(o["pasos"]) == 1
+    assert o["deca_por_pedido"] is True
+
+
+def test_deca_por_pedido_solo_si_abriria_justo_esa_orden(con_sesion, monkeypatch, odoo):
+    con_sesion("viajes.usar")
+    supabase(monkeypatch)
+    monkeypatch.setattr(odoo, "tareas_que_abre_deca", lambda pedidos: {3: 78})   # el pedido tiene otra orden más reciente
+    [o] = TestClient(app).get("/api/chofer/viajes", headers=CAB).json()["ordenes"]
+    assert o["deca_por_pedido"] is False
 
 
 def test_comprobar_una_orden_usa_el_enlace_y_rechaza_las_ajenas(con_sesion, monkeypatch, odoo):

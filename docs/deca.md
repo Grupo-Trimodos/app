@@ -24,6 +24,15 @@ DECA sigue siendo una PWA aparte (`public/deca/`, abre sin cobertura), pero se v
   marca una raya bajo la cabecera mientras se edita o se revisa.
 - Ya no tiene barra propia ni botón «Volver al inicio»: se vuelve con la cabecera, como en el resto.
 
+## Abrir una orden desde «Mis viajes» (17-11-2026)
+
+`/deca/?pedido=S2621473&empresa=stinsa` (o `transargi`) hace lo mismo que elegir la empresa y escribir el pedido: busca
+con `/api/deca/resolve-qr` y los mismos permisos, y limpia la dirección para no repetir la búsqueda al recargar. Datos no
+válidos: no busca nada. **DECA abre la orden más reciente del pedido**, y un pedido puede tener varias (17-11-2026: 16 de
+las 50 órdenes abiertas de la ventana). Por eso «Mis viajes» solo ofrece el enlace cuando DECA abriría justo esa orden
+(`OdooClient.tareas_que_abre_deca`); si no, pide escanear el QR de la orden. Abrir DECA por el id de la orden exigiría
+cambiar `resolve` (DECA escribe en Odoo): queda propuesto, sin hacer. Detalle en [viajes.md](viajes.md).
+
 ## El PDF sin contraseña de un usuario de Odoo (pendiente de decidir)
 
 Comprobado el 16-11-2026 en el Odoo 18 de producción, solo leyendo:
