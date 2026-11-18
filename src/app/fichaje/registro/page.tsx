@@ -58,7 +58,7 @@ export default async function RegistroImprimible({ searchParams }: { searchParam
 
       <article className="registro-hoja">
         <header>
-          <p className="registro-marca">Grupo Trimodos</p>
+          <p className="registro-marca"><img src="/deca/img/trimodos.png" alt="Grupo Trimodos" width={210} height={45} /></p>
           <h1>Registro de jornada</h1>
           <dl>
             <div><dt>Persona</dt><dd>{nombre || "—"}</dd></div>

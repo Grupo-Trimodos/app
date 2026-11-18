@@ -6,6 +6,7 @@ Reglas y bases del proyecto: [`../AGENTS.md`](../AGENTS.md). Puesta en marcha: [
 |---|---|
 | [configuracion-inicial.md](configuracion-inicial.md) | Supabase, login con Microsoft, Google y código + PIN, primer administrador y Vercel (una sola vez) |
 | [acceso-y-perfiles.md](acceso-y-perfiles.md) | Sesión, permisos, los cuatro perfiles básicos, pantallas y administración |
+| [identidad-visual.md](identidad-visual.md) | Logos, colores y tipografía compartidos por la app y DECA |
 | [fichaje-y-vacaciones.md](fichaje-y-vacaciones.md) | El piloto: fichaje, vacaciones, envío a Odoo y Mi equipo |
 | [mapa-organizacion-odoo.md](mapa-organizacion-odoo.md) | Correspondencias comprobadas, procedencia de los datos y enfoque por rol |
 | [odoo.md](odoo.md) | Sincronización con Odoo y lecturas del cuadro de mando |

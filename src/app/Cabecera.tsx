@@ -6,13 +6,14 @@ import { usuarioActual } from "@/lib/usuario";
 import Icono from "./Icono";
 import Navegacion, { VolverAlInicio } from "./Navegacion";
 import BarraCampo, { type Pestana } from "./BarraCampo";
+import MarcasGrupo from "./MarcasGrupo";
 
 // La PWA de DECA pinta esta misma cabecera en public/deca/app.js (con /api/sesion/cabecera): si cambias el marcado, cámbialo allí.
 export default async function Cabecera({ nombre }: { nombre?: string }) {
   if (nombre === undefined) {
     return <header className="shell-public-header">
       <Link href="/" aria-label="Grupo Trimodos, inicio"><img src="/deca/img/trimodos.png" alt="Grupo Trimodos" /></Link>
-      <span>Personas · Transporte · Logística</span>
+      <span>El espacio de nuestro equipo</span>
     </header>;
   }
   const [{ enMenu, pantalla }, { total }] = await Promise.all([usuarioActual(), misPendientes()]);
@@ -63,6 +64,7 @@ export default async function Cabecera({ nombre }: { nombre?: string }) {
         <Navegacion areas={areas} inicio={pantalla === "direccion" ? "Cuadro de mando" : "Inicio"} />
         <div className="shell-sidebar-footer"><span className="shell-brand-line" />
           <strong>En equipo, en movimiento.</strong><span>La conexión entre oficina y carretera.</span>
+          <MarcasGrupo />
         </div>
       </aside>
       <header className="shell-header">

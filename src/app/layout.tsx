@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import BarraCarga from "./BarraCarga";
+import "../../public/deca/marca.css";
 import "./globals.css";
 import "../../public/deca/cabecera.css";   // cabecera y menú: la misma hoja que usa la PWA de DECA
 import "./shell.css";
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
   icons: { icon: "/deca/favicon.png", apple: "/deca/icons/apple-touch-icon.png" },
 };
 
-export const viewport: Viewport = { themeColor: "#152636", colorScheme: "light" };
+export const viewport: Viewport = { themeColor: "#fcda00", colorScheme: "light" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

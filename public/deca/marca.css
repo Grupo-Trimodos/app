@@ -1,0 +1,24 @@
+/* Identidad compartida por la web y DECA. Fuente local: sin peticiones a terceros y disponible sin cobertura.
+   Referencias y licencia en docs/identidad-visual.md y fonts/Mulish-OFL.txt. */
+@font-face {
+  font-family: "Mulish";
+  src: url("/deca/fonts/mulish-variable.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 200 1000;
+  font-display: swap;
+}
+:root {
+  --marca-amarillo: #fcda00;
+  --marca-negro: #191a18;
+  --marca-papel: #f6f6f2;
+  --marca-fuente: "Mulish", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --marca-stinsa: #009f92;
+  --marca-transargi: #f17e49;
+}
+.marcas-grupo { display: flex; align-items: center; gap: 22px; }
+.marcas-grupo img { display: block; width: 94px; height: 30px; object-fit: contain; }
+.marcas-grupo img + img { padding-left: 20px; border-left: 1px solid #d4d7ca; width: 114px; }
+.shell-sidebar-footer .marcas-grupo { gap: 12px; padding: 14px 12px; background: white; border-radius: 8px; }
+.shell-sidebar-footer .marcas-grupo img { width: 66px; height: 25px; }
+.shell-sidebar-footer .marcas-grupo img + img { width: 78px; padding-left: 12px; }
+.shell-sidebar-footer .marcas-grupo { margin-top: 8px; }

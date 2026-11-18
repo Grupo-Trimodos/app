@@ -3,38 +3,39 @@
    para tener una dirección fija. El marcado sale de src/app/Cabecera.tsx; DECA lo repite en public/deca/app.js con los
    datos de /api/sesion/cabecera: si cambias uno, cambia el otro. */
 .app-shell { --shell-ancho: 232px; }
-.shell-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 35; width: 232px; background: #142535; color: #d8e0e8; display: flex; flex-direction: column; padding: 27px 16px 22px; }
-.shell-logo { display: flex; align-items: center; justify-content: center; background: white; min-height: 63px; border-radius: 7px; padding: 12px 15px; margin: 0 4px 36px; }
+.shell-sidebar { overflow-y: auto; scrollbar-width: thin; scrollbar-color: #d4d7ca transparent; }
+.shell-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 35; width: 232px; background: #fff; color: #20211e; border-right: 1px solid #e0e1d8; border-top: 5px solid var(--marca-amarillo); font-family: var(--marca-fuente); display: flex; flex-direction: column; padding: 27px 16px 22px; }
+.shell-logo { display: flex; align-items: center; justify-content: center; background: white; min-height: 78px; border-radius: 0; padding: 12px 2px 24px; margin: 0 8px 28px; border-bottom: 1px solid #e0e1d8; }
 .shell-logo img { display: block; width: 100%; height: auto; max-height: 44px; object-fit: contain; }
-.shell-nav-label { color: #8da1b4; font-size: 10px; letter-spacing: .16em; font-weight: 700; margin: 0 14px 14px; }
+.shell-nav-label { color: #62665c; font-size: 10px; letter-spacing: .16em; font-weight: 700; margin: 0 14px 14px; }
 .shell-nav { display: flex; flex-direction: column; gap: 5px; }
-.shell-nav-link { display: flex; align-items: center; gap: 12px; min-height: 49px; padding: 12px 14px; border-radius: 8px; color: #bfccd8; text-decoration: none; font-size: 14px; font-weight: 600; transition: background .15s, color .15s; }
-.shell-nav-link:hover { background: #213748; color: white; }
-.shell-nav-link.activo { background: #fcda00; color: #162635; box-shadow: 0 3px 12px #0000000b; }
+.shell-nav-link { display: flex; align-items: center; gap: 12px; min-height: 49px; padding: 12px 14px; border-radius: 8px; color: #575c51; text-decoration: none; font-size: 14px; font-weight: 600; transition: background .15s, color .15s; }
+.shell-nav-link:hover { background: #f3f3ed; color: #191a18; }
+.shell-nav-link.activo { background: #fcda00; color: #191a18; box-shadow: 0 3px 12px #0000000b; }
 .shell-nav-link:focus-visible, .shell-logo:focus-visible { outline-color: #fcda00; }
 .shell-sidebar-footer { display: flex; flex-direction: column; gap: 9px; margin: auto 13px 0; padding-top: 38px; }
 .shell-brand-line { display: inline-block; width: 28px; height: 3px; background: #fcda00; border-radius: 2px; flex-shrink: 0; }
-.shell-sidebar-footer strong { color: #dce5ed; font-size: 12px; font-weight: 600; }
-.shell-sidebar-footer > span:last-child { color: #8da1b4; font-size: 11px; max-width: 145px; line-height: 1.65; }
-.shell-header { height: 80px; margin-left: 232px; padding: 0 36px; border-bottom: 1px solid #e3e8ed; display: flex; align-items: center; justify-content: space-between; background: white; gap: 20px; }
-.shell-heading { display: flex; align-items: center; gap: 10px; color: #617082; font-size: 13px; }
-.shell-heading svg { color: #8799ab; }
+.shell-sidebar-footer strong { color: #20211e; font-size: 12px; font-weight: 600; }
+.shell-sidebar-footer > span:not(.shell-brand-line) { color: #62665c; font-size: 11px; max-width: 145px; line-height: 1.65; }
+.shell-header { height: 80px; margin-left: 232px; padding: 0 36px; border-bottom: 1px solid #e0e1d8; display: flex; align-items: center; justify-content: space-between; background: white; gap: 20px; }
+.shell-heading { display: flex; align-items: center; gap: 10px; color: #62665c; font-size: 13px; }
+.shell-heading svg { color: #70756a; }
 .shell-user { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.shell-avatar { height: 35px; width: 35px; border-radius: 50%; background: #eaf0f5; color: #33536c; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; }
+.shell-avatar { height: 35px; width: 35px; border-radius: 50%; background: #fff7bf; color: #3e4336; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; }
 .shell-user-name { font-size: 13px; font-weight: 600; max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.shell-logout { display: flex; align-items: center; gap: 8px; border: 0; border-left: 1px solid #e2e8ee; margin-left: 5px; padding: 10px 0 10px 19px; min-height: 44px; color: #617082; background: none; cursor: pointer; font-size: 13px; }
-.shell-logout:hover { color: #182737; }
-.shell-avisos { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-left: auto; border-radius: 10px; color: #617082; flex-shrink: 0; }
-.shell-avisos:hover { background: #f0f3f6; color: #182737; }
-.shell-avisos.con-avisos { color: #182737; }
-.shell-avisos-cuenta { position: absolute; top: 4px; right: 2px; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 10px; background: #fcda00; color: #182330; font-size: 11px; font-weight: 800; line-height: 19px; text-align: center; box-shadow: 0 0 0 2px white; }
-.shell-skip { position: fixed; top: -80px; left: 248px; z-index: 100; background: #fcda00; color: #142535; border-radius: 7px; padding: 12px 18px; font-weight: 700; }
+.shell-logout { display: flex; align-items: center; gap: 8px; border: 0; border-left: 1px solid #e0e1d8; margin-left: 5px; padding: 10px 0 10px 19px; min-height: 44px; color: #62665c; background: none; cursor: pointer; font-size: 13px; }
+.shell-logout:hover { color: #20211e; }
+.shell-avisos { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-left: auto; border-radius: 10px; color: #62665c; flex-shrink: 0; }
+.shell-avisos:hover { background: #f3f3ed; color: #20211e; }
+.shell-avisos.con-avisos { color: #20211e; }
+.shell-avisos-cuenta { position: absolute; top: 4px; right: 2px; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 10px; background: #fcda00; color: #20211e; font-size: 11px; font-weight: 800; line-height: 19px; text-align: center; box-shadow: 0 0 0 2px white; }
+.shell-skip { position: fixed; top: -80px; left: 248px; z-index: 100; background: #fcda00; color: #191a18; border-radius: 7px; padding: 12px 18px; font-weight: 700; }
 .shell-skip:focus { top: 16px; }
 @media (max-width: 900px) {
   .shell-sidebar { position: relative; inset: auto; width: 100%; padding: 15px 18px 0; flex-direction: row; flex-wrap: wrap; align-items: center; }
-  .shell-logo { width: 137px; min-height: 43px; padding: 7px 10px; margin: 0 0 13px; border-radius: 5px; }
+  .shell-logo { width: 137px; min-height: 43px; padding: 7px 0; margin: 0 0 13px; border-radius: 0; border-bottom: 0; }
   .shell-nav-label { margin: 0 0 13px auto; font-size: 9px; }
-  .shell-nav { width: calc(100% + 36px); flex: 0 0 calc(100% + 36px); margin: 0 -18px; padding: 0 13px 10px; flex-direction: row; overflow-x: auto; scrollbar-width: thin; scrollbar-color: #426178 transparent; }
+  .shell-nav { width: calc(100% + 36px); flex: 0 0 calc(100% + 36px); margin: 0 -18px; padding: 0 13px 10px; flex-direction: row; overflow-x: auto; scrollbar-width: thin; scrollbar-color: #939a86 transparent; }
   .shell-nav-link { gap: 8px; flex-shrink: 0; font-size: 12px; min-height: 44px; padding: 10px 13px; }
   .shell-nav-link svg { width: 18px; height: 18px; }
   .shell-sidebar-footer { display: none; }
@@ -54,14 +55,21 @@
 }
 /* App del móvil (chóferes y operarios): sin menú, una barra con el logo, «Inicio», los avisos y la cuenta. */
 .campo-cabecera { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 10px; height: 64px; padding: 0 16px;
-  background: white; border-bottom: 1px solid #e3e8ed; }
+  background: white; border-bottom: 3px solid var(--marca-amarillo); font-family: var(--marca-fuente); }
 .campo-logo { display: flex; align-items: center; flex-shrink: 0; }
 .campo-logo img { display: block; height: 30px; width: auto; }
 .campo-volver { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; margin-left: 4px; border-radius: 10px;
-  background: #eef3f7; color: #182737; font-weight: 700; font-size: 14px; text-decoration: none; }
+  background: #f2f2e9; color: #20211e; font-weight: 700; font-size: 14px; text-decoration: none; }
 .campo-volver svg { transform: rotate(180deg); }
 .campo-hueco { flex: 0; }
 .campo-cabecera .shell-avisos { margin-left: auto; }
 .campo-cabecera .shell-user-name { display: none; }
 .campo-cabecera .shell-logout span { display: none; }
 .campo-cabecera .shell-logout { padding-left: 12px; }
+@media (max-width: 380px) {
+  .campo-cabecera { gap: 6px; padding-inline: 10px; }
+  .campo-logo img { max-width: 110px; height: auto; }
+  .campo-volver { padding-inline: 9px; margin-left: 0; }
+  .campo-cabecera .shell-user { gap: 5px; }
+  .campo-cabecera .shell-logout { padding-left: 8px; margin-left: 0; }
+}

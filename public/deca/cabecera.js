@@ -52,7 +52,10 @@
             nodo("a", { class: "shell-nav-link" + (e.id === "deca" ? " activo" : ""), href: e.ruta, "aria-current": e.id === "deca" ? "page" : null },
               icono(e.icono, 21), nodo("span", {}, e.nombre)))),
           nodo("div", { class: "shell-sidebar-footer" }, nodo("span", { class: "shell-brand-line" }),
-            nodo("strong", {}, "En equipo, en movimiento."), nodo("span", {}, "La conexión entre oficina y carretera."))),
+            nodo("strong", {}, "En equipo, en movimiento."), nodo("span", {}, "La conexión entre oficina y carretera."),
+            nodo("div", { class: "marcas-grupo", "aria-label": "Empresas de Grupo Trimodos" },
+              nodo("img", { src: "/deca/img/stinsa.png", alt: "Stinsa", width: 94, height: 30 }),
+              nodo("img", { src: "/deca/img/transargi.png", alt: "Transargi", width: 94, height: 30 })))),
         nodo("header", { class: "shell-header" },
           nodo("div", { class: "shell-heading" }, icono(ic.actividad, 20), nodo("span", {}, d.contexto || "Grupo Trimodos")), extremos));
     } else {
