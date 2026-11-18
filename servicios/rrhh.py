@@ -81,6 +81,17 @@ def _marcar(tabla: str, fila_id: int, estado: str, error: str | None = None) -> 
 
 # ------------------------------------------------------------------ ficha de empleado (automática)
 
+def _ficha_descartada(token, usuario_id: str) -> int | None:
+    """Ficha que su responsable quitó al deshacer el enlace (usuarios.vinculo_rechazado): el enlace automático no la
+    vuelve a poner. Sin la migración 20261117110000 la columna no existe y no hay ninguna descartada."""
+    try:
+        filas = supa.leer(token, "usuarios", {"id": f"eq.{usuario_id}", "select": "vinculo_rechazado"})
+    except supa.FaltaEnBase:
+        return None
+    valor = filas[0].get("vinculo_rechazado") if filas else None
+    return valor if isinstance(valor, int) else None
+
+
 def empleado(token, usuario_id: str) -> tuple[int | None, str | None]:
     """Id de empleado de Odoo de esa persona y, si no se encuentra, el motivo (para que la oficina sepa qué arreglar).
     Si no está guardado, se busca en Odoo por su correo de trabajo (Microsoft) o por su código (credencial «barcode»)."""
@@ -104,6 +115,9 @@ def empleado(token, usuario_id: str) -> tuple[int | None, str | None]:
         return None, (f"En Odoo hay varios empleados {donde}: pon el id a mano en Administración" if hay
                       else f"No hay ningún empleado en Odoo {donde}")
     emp = int(hay[0]["id"])
+    if emp == _ficha_descartada(token, usuario_id):
+        return None, (f"La ficha de Odoo que se encuentra {donde} la quitó su responsable al deshacer su enlace: "
+                      "enlázala en «Mi equipo → Enlazar con Odoo»")
     if token is supa.SERVICIO and odoo_real():   # solo la sincronización lo guarda (un usuario no edita su ficha)
         supa.actualizar(token, "usuarios", {"id": f"eq.{usuario_id}", "odoo_employee_id": "is.null"}, {"odoo_employee_id": emp})
     return emp, None

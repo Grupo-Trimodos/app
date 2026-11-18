@@ -42,16 +42,61 @@ instalada o falla la lectura, se muestra el error y las acciones no permiten fic
 **Pruebas:** `npm run test:jornada` (Node 22.6 o posterior), suite Python y compilación de la web. La comprobación real de
 la migración y las operaciones simultáneas se ejecuta con `scripts.prueba_jornadas_db`, descrito en `docs/scripts.md`.
 
-## Reloj y acciones en móvil (17-11-2026)
+## App del móvil para operarios y chóferes (18-11-2026)
 
-InicioCampo y Fichaje comparten `RelojJornada`. Se recalcula cada 15 segundos desde el instante del servidor, con
-`calcularJornada`; respeta pausas y el bloqueo a las 16 horas. Al volver a una pestaña se refrescan los datos.
-El servidor sigue validando cada acción: el reloj no escribe fichajes ni decide la hora que se guarda.
+Quien tiene la pantalla «campo» ve una sola pantalla de inicio y, abajo, una barra fija (`src/app/BarraCampo.tsx`,
+pintada desde `Cabecera.tsx`) con «Inicio», «Vacaciones», «Mis fichajes» y «Herramientas»; cada pestaña sale solo con
+su permiso (Herramientas, con algún permiso del área «automatizaciones»). La barra también quita `?ok=`/`?error=` de la
+dirección para que el mensaje no reaparezca al recargar. Al trabajador **no se le enseña nada de Odoo** (ni estados de
+envío ni su ficha); en la pantalla de oficina «Mis fichajes» los sigue mostrando.
 
-`presentarJornada` distingue el turno nocturno terminado hoy («Última jornada») sin cambiar su imputación al día de
-entrada. «Esta semana» incluye la jornada abierta solo si pertenece a esa semana, no está pendiente de cierre y no
-tiene incidencias; lo indica debajo del total. Los totales cerrados utilizados por las otras pantallas no cambian.
+La tarjeta de jornada (`RelojJornada`, en el inicio y en «Mis fichajes») usa `vistaDelDia` de `src/lib/jornada.ts`,
+solo de presentación: estado con color («Trabajando desde las 7:02», «En pausa desde las 10:30», «Jornada terminada a
+las 15:04»), un contador que avanza cada segundo en el móvil a partir de los fichajes y de la hora del servidor, y
+«Esta semana: X de 40 h» con una barra (jornada de referencia de 40 h, `JORNADA_SEMANAL_HORAS`). Con la jornada
+abierta, el número grande es lo que lleva en ella (aunque empezara ayer) y, si hoy ya terminó otra, «Hoy en total».
+Sin jornada abierta, «Hoy has trabajado» suma las jornadas que han terminado hoy: el turno de noche cuenta el día que
+acaba. La semana (de lunes a domingo) sigue la regla de imputación por día de entrada.
 
-«Terminar jornada» aparece primero y requiere confirmación. El botón de envío se desactiva mientras se guarda.
-«Mi empresa y mi equipo» queda debajo del bloque de fichaje para que su carga no desplace los botones. Los estados y
-los errores del envío a Odoo siguen visibles. Este cambio no modifica acciones de servidor, migraciones ni integración.
+El botón grande es la acción que toca: «Fichar entrada», «Fichar salida» (pide confirmación) o, en pausa, «Volver al
+trabajo»; el secundario es «Hacer una pausa» o «Fichar salida». Se ficha con la acción `ficharAhora`, que devuelve el
+resultado a la tarjeta («Entrada fichada a las 7:02», con vibración si el móvil la tiene) y refresca la página; el
+botón se desactiva mientras se envía. Sin conexión: «No hay conexión. No se ha fichado. Inténtalo de nuevo.» (no hay
+modo sin conexión). Con una jornada pendiente de cierre, encima de la tarjeta: «Ayer no fichaste la salida. Tu
+responsable la cerrará con la hora real.» y no hay botones (la base de datos no deja fichar hasta el cierre). Debajo,
+solo si las hay, sus solicitudes de vacaciones pendientes y la próxima aprobada. El inicio de campo y «Mis fichajes»
+se ven en oscuro si el móvil está en modo oscuro; también «Vacaciones» y «Herramientas»; el resto de la app sigue en claro.
+
+### Vacaciones, Mis fichajes y Herramientas en el móvil
+
+Encargo de Félix (18-11-2026): por ahora operarios y chóferes **no se enlazan con su ficha de Odoo**; todo se guarda en
+la app y se enlazará más adelante. En estas pantallas **no se enseña nada de Odoo** (ni estados de envío, ni «origen»,
+ni la ficha de empleado), ni palabras como «provisional» o «semana cerrada». La pantalla de oficina sigue mostrando el
+estado del envío a Odoo como antes.
+
+- **Vacaciones** (`src/app/ausencias/`). **Todavía no hay saldo de días**: Félix dirá más adelante cuántos tiene cada
+  uno. Mientras, arriba se **recopilan las horas trabajadas** de este año, de este mes y de esta semana (frente a las
+  40 h), con `horasTrabajadas` de `src/lib/jornada.ts` y las mismas reglas que el resto (cada jornada cuenta el día de
+  su entrada, también el turno de noche del 31 de diciembre; las pausas no cuentan; la jornada abierta suma lo que lleva;
+  la pendiente de cierre y la que hay que revisar no suman). Debajo: «Tus días de vacaciones aparecerán aquí cuando la
+  empresa los configure.» Para pedir días (`PedirDias.tsx`): tipo, primer y último día con el selector de fecha del
+  móvil y un comentario; al momento dice «Son 5 días laborables (de lunes a viernes)» y avisa si entra un fin de semana
+  (los festivos todavía no se descuentan). Se guarda igual que antes (acción `pedirAusencia`, misma tabla y reglas).
+  «Mis solicitudes» son tarjetas con las fechas en claro («Del lunes 14 al viernes 18 de diciembre»), el tipo, los días
+  laborables, el estado con color («Pendiente de que la apruebe tu responsable», «Aprobada», «Rechazada: motivo») y a
+  quién le llega (`quien_me_aprueba`). En la pantalla de oficina se ve igual, con el estado del envío a Odoo de las aprobadas.
+- **Mis fichajes** (`src/app/fichaje/`): la tarjeta de la jornada y, debajo, pestañas «Semana» y «Mes» con anterior y
+  siguiente (`?semana=AAAA-MM-DD`, `?mes=AAAA-MM`; nunca hacia el futuro). Cada día: entrada–salida (el turno de noche,
+  «22:00 – 6:00 del martes»), pausas, total y, si está en curso, «Trabajando» o «En pausa». Total de la semana frente a
+  40 h o total del mes. Lo que anotó el responsable se ve con su motivo («Salida a las 15:00 anotada por tu
+  responsable: …»). «Descargar mi registro» abre `/fichaje/registro?mes=…`: el mes con nombre, centro, cada día
+  (entrada, salida, pausas y horas), total y las correcciones al pie, para imprimir o «Guardar como PDF» con el cuadro
+  de imprimir del navegador (`window.print` y `@media print`, sin librerías). Todo sale de `registroDeJornadas`.
+- **Herramientas** (`src/app/automatizaciones/page.tsx`): en el móvil, tarjetas grandes con las automatizaciones que
+  permite su perfil. Sin ninguna, la pestaña no sale y la página dice «Todavía no tienes herramientas activadas.».
+
+Pruebas: `tests/web/registro.test.mjs` (horas del año, mes y semana con turno de noche entre meses y entre años, días
+laborables de una solicitud, fechas en español y semanas y meses de «Mis fichajes»), dentro de `npm run test:jornada`.
+
+Revisión del 18-11-2026: el registro mensual no ofrece el botón de imprimir si falla la consulta de fichajes; mantiene
+el error visible para evitar presentar una lectura fallida como un registro vacío.

@@ -82,6 +82,14 @@
       ]
     },
     {
+      "id": "calendario", "nombre": "Calendario", "ruta": "/calendario",
+      "descripcion": "Tus notas, las fechas señaladas de la empresa, tus vacaciones aprobadas y, si entras con Microsoft, tu Outlook.",
+      "permisos": [
+        { "id": "calendario.usar", "nombre": "Usar su calendario: apuntar sus notas y ver las fechas señaladas que le tocan", "de_puesto": true },
+        { "id": "calendario.publicar", "nombre": "Publicar fechas señaladas para todos, para uno de sus centros o para uno de sus equipos" }
+      ]
+    },
+    {
       "id": "documentos", "nombre": "Mi documentación", "ruta": "/documentos",
       "descripcion": "Tus carnés, certificados y reconocimientos, con su fecha de caducidad.",
       "permisos": [
@@ -117,6 +125,13 @@
       "descripcion": "Corregir mercancía, bultos, euro palets y peso de la orden y descargar el PDF.",
       "permisos": [
         { "id": "deca.usar", "nombre": "Corregir órdenes de transporte (DECA)", "de_puesto": true }
+      ]
+    },
+    {
+      "id": "automatizaciones", "nombre": "Automatizaciones", "ruta": "/automatizaciones",
+      "descripcion": "Herramientas automáticas con datos oficiales: revisión del precio del transporte por gasóleo.",
+      "permisos": [
+        { "id": "automatizaciones.gasoleo", "nombre": "Calcular la revisión del precio del transporte por gasóleo (precios del Ministerio)" }
       ]
     },
     {

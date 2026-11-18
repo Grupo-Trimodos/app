@@ -63,40 +63,73 @@ cargo por centro.
 ## Enlace con Odoo por el móvil (17-11-2026)
 
 Autorizado por Félix: «los chóferes se enlazan con empleados de Odoo a través del número de teléfono, y luego el
-encargado confirma que el perfil de la app y el de Odoo son la misma persona». Migración
-`20261117110000_vinculo_odoo_telefono.sql`. Qué alcanza en los envíos a Odoo: [odoo.md](odoo.md#enlace-de-cada-persona-con-odoo-por-su-móvil-17-11-2026).
+encargado confirma que el perfil de la app y el de Odoo son la misma persona». Decisiones del 18-11-2026: el móvil solo
+se pide a quien entra con código y PIN; a quien entra con Microsoft o Google se le propone la ficha por su correo; solo se
+comparan teléfonos de empresa. Migración `20261117110000_vinculo_odoo_telefono.sql`. Qué alcanza en los envíos a Odoo:
+[odoo.md](odoo.md#enlace-de-cada-persona-con-odoo-por-su-móvil-17-11-2026).
 
-- **No hay autorregistro:** las cuentas las sigue creando administración (código + PIN o Microsoft). El móvil se pide al
-  entrar: a quien tiene en sus perfiles `fichaje.fichar` o `chofer.usar` y aún no lo ha dado le sale, arriba del inicio,
-  «Escribe tu número de móvil» con un botón grande (`src/app/PedirTelefono.tsx`). En «Mi perfil» lo ve y lo corrige
-  mientras su responsable no lo haya confirmado. No bloquea fichar.
+- **No hay autorregistro:** las cuentas las sigue creando administración (código + PIN o Microsoft/Google).
+- **Cómo sabe la app cómo entra cada uno:** por su cuenta de Supabase Auth, no por su perfil. Quien entra con código y
+  PIN tiene el correo interno `codigo@pin.grupotrimodos.com` (`src/lib/pin.ts`, `src/app/admin/acciones.ts`); quien
+  entra con Microsoft o Google, su correo real. Lo calcula `privado.entra_con_pin(persona)`, que lee `auth.users`.
+- **El móvil, solo a quien entra con código y PIN** (operarios y chóferes) y tiene en sus perfiles `fichaje.fichar` o
+  `chofer.usar`. Si aún no lo ha dado, le sale arriba del inicio «Escribe tu número de móvil» con un botón grande
+  (`src/app/PedirTelefono.tsx`, que pregunta a `public.mi_telefono()`). En «Mi perfil» lo ve y lo corrige mientras su
+  responsable no lo haya confirmado. No bloquea fichar. Quien entra con Microsoft o Google no lo da (la base de datos
+  lo rechaza): su ficha se busca por su correo.
+- **Dónde se guarda el móvil:** en `public.telefonos_personas`, aparte de `usuarios` (las políticas de `usuarios`
+  enseñan la fila entera a Seguridad, a quien gestiona la ropa…). Lo ven solo la persona y quien puede enlazarla
+  (`privado.puedo_vincular`, que incluye a la administración). Solo se escribe con `public.guardar_mi_telefono(texto)`,
+  que lo normaliza (solo cifras con el prefijo del país: `34612345678`).
 - **Dos ids de Odoo por persona:** `usuarios.odoo_employee_id` (ficha de empleado, `hr.employee`: de ella salen los
   envíos de fichajes y ausencias) y `usuarios.odoo_conductor_id` (contacto conductor, `res.partner` con `is_driver`: el
   que llevan las órdenes de transporte; en Odoo no está unido a la ficha de empleado; hoy la app no envía nada con él).
 - **Quién confirma:** quien tiene `personas.vincular` («Confirmar qué ficha de Odoo corresponde a cada persona de sus
   centros», área «Mi equipo»; la migración se lo da a Responsable y Administrador) sobre las personas de sus centros
   (`privado.puedo_sobre`), o la administración (`admin.usuarios` o superadministrador). Nadie confirma su propio enlace,
-  salvo un superadministrador. Pantalla: **Mi equipo → Enlazar con Odoo** (`/equipo/odoo`).
-- **Qué se propone** (`GET /api/odoo/vinculos/pendientes`, `servicios/organizacion.py`): las fichas de empleado activas
-  de las empresas configuradas y los contactos conductores del grupo cuyo teléfono (últimas 9 cifras) coincide con el
-  móvil de la persona. Si no coincide ninguno, fichas con un nombre parecido, marcadas «Por nombre, compruébalo». Un
-  teléfono que está en varias fichas (centralitas) no se marca como seguro. De Odoo nunca sale un teléfono entero: como
-  mucho sus 3 últimas cifras. Quién sale lo decide Supabase con la sesión de quien mira
+  salvo un superadministrador. A un superadministrador solo lo enlaza otro superadministrador (y solo otro ve su móvil).
+  Pantalla: **Mi equipo → Enlazar con Odoo** (`/equipo/odoo`).
+- **Qué se propone** (`GET /api/odoo/vinculos/pendientes`, `servicios/organizacion.py`): fichas de empleado activas de
+  las empresas configuradas y contactos conductores del grupo. A quien entra con PIN, las que tienen su móvil (últimas 9
+  cifras) en un teléfono de empresa (`mobile_phone` o `work_phone` de la ficha; `phone` o `mobile` del contacto; nunca
+  `private_phone`). A quien entra con Microsoft o Google, las que tienen su correo (`work_email` o el campo de
+  `ODOO_CAMPO_CORREO`, como `buscar_empleado`; `email` del contacto conductor). Si no coincide ninguna, fichas con un
+  nombre parecido, marcadas «Por nombre, compruébalo». Una ficha solo sale **marcada sola** («Coincide su móvil» /
+  «Coincide su correo») si es la única con ese dato, está libre, el nombre se parece, no es la que se quitó al deshacer
+  y (por móvil) nadie más ha dado ese móvil en la app. Si no, sale con su aviso: «El nombre no coincide», «Este móvil lo
+  han dado varias personas de la app», «está en varias fichas de Odoo»… De Odoo nunca sale un teléfono ni un correo
+  entero: como mucho las 3 últimas cifras del teléfono. Quién sale lo decide Supabase con la sesión de quien mira
   (`public.personas_para_vincular()`).
-- **Confirmar y deshacer:** `public.confirmar_vinculo_odoo(persona, empleado, conductor)` y
-  `public.deshacer_vinculo_odoo(persona)`. Antes de confirmar, la pantalla vuelve a pedir las propuestas y solo acepta
-  una ficha propuesta y libre. Una ficha de empleado o un contacto conductor no se enlaza con dos personas. Para cambiar
-  un enlace confirmado hay que deshacerlo antes. Con el enlace confirmado, la persona ya no cambia su móvil.
+- **Confirmar y deshacer, solo desde el servidor:** la pantalla llama a `POST /api/odoo/vinculos/confirmar` y
+  `POST /api/odoo/vinculos/deshacer` (`personas.vincular`). La ruta vuelve a pedir las propuestas con la sesión de quien
+  confirma y a Odoo, solo acepta una ficha propuesta y libre para una persona que ve, y entonces llama a
+  `public.confirmar_vinculo_odoo(autor, persona, empleado, conductor)` o `public.deshacer_vinculo_odoo(autor, persona)`
+  con la **clave de servidor**. Esas dos funciones no se pueden ejecutar con la sesión del navegador (solo
+  `service_role`): así nadie se salta la comprobación contra Odoo llamando a la base de datos con su sesión. Dentro, se
+  vuelven a comprobar los permisos **de `autor`** (no los de la clave de servidor) con la misma regla
+  (`privado.puede_vincular(autor, persona)`, que pone a `autor` como usuario de la consulta solo durante la
+  comprobación). Es el mismo uso de la clave de servidor que anotar envíos a Odoo (`servicios/supa.py`): decide a qué
+  ficha van los envíos.
+- **Reglas al confirmar o deshacer:** una ficha de empleado o un contacto conductor no se enlaza con dos personas. Para
+  cambiar un enlace confirmado hay que deshacerlo antes. Con el enlace confirmado, la persona ya no cambia su móvil.
+  **Con la jornada abierta y su entrada ya en Odoo** (su último fichaje es una entrada o reanudación «enviada») no se
+  cambia de ficha ni se deshace: su salida iría a otra ficha y la de Odoo quedaría abierta. Se hace cuando fiche la salida.
+- **Deshacer descarta la ficha:** queda en `usuarios.vinculo_rechazado`. El enlace automático por correo o código
+  (`servicios/rrhh.py`) no se la vuelve a poner (la base de datos también lo impide): sus fichajes quedan «sin empleado»
+  con el motivo hasta que su responsable confirme una ficha. Si administración pone a mano esa ficha, deja de estar
+  descartada.
 - **Historial:** `vinculos_odoo_historial`, solo crece. Quién confirmó o deshizo qué y cuándo, con el móvil y los ids
   anteriores y nuevos. Lo ven la administración y quien actuó.
 - **Otras vías siguen abiertas:** el campo «id de empleado» de Administración → Personas y el enlace automático por
   correo o código (`servicios/rrhh.py`). Si cambian la ficha de alguien, el enlace deja de contar como confirmado y queda
-  en el historial («cambio en administración» o «cambio del servidor»). Nadie con sesión puede marcar un enlace como
-  confirmado ni tocar el contacto conductor sin pasar por las funciones.
-- **Las políticas de cambio de `usuarios` no cambian:** la persona no edita su fila; el móvil va por
-  `public.guardar_mi_telefono(texto)`, que lo normaliza (solo cifras con el prefijo del país: `34612345678`).
+  en el historial («cambio en administración» o «cambio del servidor»). Un cambio del móvil por fuera de la función (editor
+  SQL) con el enlace confirmado queda como «cambio de teléfono». Nadie con sesión puede marcar un enlace como confirmado
+  ni tocar el contacto conductor o la ficha descartada sin pasar por las funciones.
+- **Las políticas de cambio de `usuarios` no cambian.**
 - **En el piloto** el perfil Chófer no tiene `chofer.usar`, así que la pantalla no sabe quién es chófer: propone
-  contacto conductor a cualquiera cuyo móvil o nombre coincida con uno, con la opción «Ninguno».
+  contacto conductor a cualquiera cuyo móvil, correo o nombre coincida con uno, con la opción «Ninguno».
+- **Sin la migración** (como está hoy producción) no se pide el móvil y «Enlazar con Odoo» dice que falta aplicarla; el
+  resto de la app sigue igual.
 - **Pruebas:** `scripts.prueba_vinculo_db` (PostgreSQL local en Docker; `--como-produccion` salta las migraciones que
   aún no están en producción) y `tests/test_vinculos_odoo.py`.
 

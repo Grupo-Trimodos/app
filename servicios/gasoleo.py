@@ -161,14 +161,18 @@ def _cliente_http() -> httpx.Client:
     return httpx.Client(timeout=TIEMPOS, headers=CABECERAS, follow_redirects=False)
 
 
-def _url_de_la_excel(enlace: str) -> str:
-    """El enlace de la página, completo. Solo se descarga de webs de la Administración (.gob.es)."""
-    url = urljoin(PAGINA, enlace)
+def _de_la_administracion(url: str, que: str) -> str:
+    """Solo se descarga por https de webs de la Administración (gob.es y sus subdominios)."""
     partes = urlsplit(url)
     host = (partes.hostname or "").lower()
     if partes.scheme != "https" or not (host == "gob.es" or host.endswith(".gob.es")):
-        raise MinisterioError(f"El enlace a la Excel no es de la web del Ministerio: {host or url}")
+        raise MinisterioError(f"{que} no es de la web del Ministerio: {host or url}")
     return url
+
+
+def _url_de_la_excel(enlace: str) -> str:
+    """El enlace de la página, completo. Solo se descarga de webs de la Administración (.gob.es)."""
+    return _de_la_administracion(urljoin(PAGINA, enlace), "El enlace a la Excel")
 
 
 def _tiempos_hasta(limite: float) -> httpx.Timeout:
@@ -180,10 +184,12 @@ def _tiempos_hasta(limite: float) -> httpx.Timeout:
 
 
 def _bajar(http: httpx.Client, url: str, limite: float) -> bytes:
-    """Descarga `url` sin pasar de `limite` (reloj de `_ahora`): cada redirección y cada trozo cuentan contra él."""
+    """Descarga `url` sin pasar de `limite` (reloj de `_ahora`): cada redirección y cada trozo cuentan contra él.
+    Cada dirección, la primera y la de cada redirección, tiene que ser https de una web .gob.es: si no, no se pide."""
     try:
         peticion = http.build_request("GET", url, timeout=_tiempos_hasta(limite))
         for _ in range(MAX_REDIRECCIONES + 1):
+            _de_la_administracion(str(peticion.url), "La dirección pedida")   # antes de pedir, también tras redirigir
             r = http.send(peticion, stream=True, follow_redirects=False)
             try:
                 if r.next_request is None:

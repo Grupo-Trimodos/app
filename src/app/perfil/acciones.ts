@@ -7,8 +7,9 @@ import { usuarioActual } from "@/lib/usuario";
 const volver = (form: FormData, msg: string, tipo: "ok" | "error" = "ok"): never =>
   redirect(`${form.get("volver") === "/perfil" ? "/perfil" : "/"}?${tipo}=${encodeURIComponent(msg)}`);
 
-/** La persona guarda su móvil. La base de datos lo normaliza y solo deja cambiar el propio, y solo mientras su
- *  responsable no haya confirmado su ficha de Odoo (public.guardar_mi_telefono). */
+/** La persona guarda su móvil (solo quien entra con código y PIN). La base de datos lo normaliza, lo guarda aparte
+ *  (public.telefonos_personas, que solo ven ella y quien puede enlazarla) y solo deja cambiar el propio, y solo mientras
+ *  su responsable no haya confirmado su ficha de Odoo (public.guardar_mi_telefono). */
 export async function guardarMiTelefono(form: FormData) {
   const { supabase, perfil } = await usuarioActual();
   if (!perfil?.activo) redirect("/");

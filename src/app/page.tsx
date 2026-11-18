@@ -35,13 +35,15 @@ const detalles: Record<string, { titulo: string; descripcion: string; etiqueta: 
   ausencias: { titulo: "Vacaciones y ausencias", descripcion: "Solicita tus días y sigue la respuesta de tu responsable.", etiqueta: "MI TIEMPO" },
   equipo: { titulo: "Mi equipo", descripcion: "Consulta la jornada de tu equipo y atiende sus solicitudes.", etiqueta: "PERSONAS" },
   equipos: { titulo: "Equipos", descripcion: "Grupos de trabajo con personas de cualquier centro o zona.", etiqueta: "PERSONAS" },
+  calendario: { titulo: "Calendario", descripcion: "Apunta tus cosas y consulta las fechas señaladas, tus vacaciones y tu Outlook.", etiqueta: "MI TIEMPO" },
   ropa: { titulo: "Ropa de trabajo", descripcion: "Pide ropa y EPIs; tu responsable la aprueba y te la entrega.", etiqueta: "EQUIPACIÓN" },
   documentos: { titulo: "Mi documentación", descripcion: "Carnés, certificados y reconocimientos al día, con aviso antes de que caduquen.", etiqueta: "MIS PAPELES" },
   incidencias: { titulo: "Incidencias", descripcion: "Avisa de un accidente, un incidente o una avería y sigue su estado.", etiqueta: "AVISAR" },
   seguridad: { titulo: "Seguridad", descripcion: "ITV, documentación, carretillas, inspecciones de almacén e incidencias.", etiqueta: "PREVENCIÓN" },
+  automatizaciones: { titulo: "Automatizaciones", descripcion: "Calcula la revisión del precio del transporte por el gasóleo con los precios del Ministerio.", etiqueta: "DATOS OFICIALES" },
   admin: { titulo: "Administración", descripcion: "Gestiona los accesos, los centros, los vehículos y la sincronización.", etiqueta: "GESTIÓN" },
 };
-const orden = ["organizacion", "transporte", "flota", "chofer", "viajes", "deca", "fichaje", "ausencias", "ropa", "documentos", "incidencias", "equipo", "equipos", "seguridad", "admin"];
+const orden = ["organizacion", "transporte", "flota", "chofer", "viajes", "deca", "fichaje", "ausencias", "ropa", "documentos", "incidencias", "equipo", "equipos", "calendario", "seguridad", "automatizaciones", "admin"];
 
 type Indicador = { href: string; icono: string; titulo: string; valor: string; detalle: string; atencion?: boolean };
 
@@ -233,7 +235,7 @@ export default async function Inicio({ searchParams }: { searchParams: Promise<{
             <p className="inicio-jornada-sub">{estado === "fuera" ? "Trabajado hoy" : "Llevas en esta jornada"}</p>
             <AvisoJornada resumen={resumen} error={!!registro?.error} />
             <div className="inicio-jornada-datos">
-              <span>Semana cerrada <b>{duracion(minutosSemana)}</b></span>
+              <span>Jornadas terminadas esta semana <b>{duracion(minutosSemana)}</b></span>
               {ultimo && <span>Último fichaje <b>{hora(ultimo.momento)}</b> <EstadoOdoo estado={ultimo.odoo_estado} error={ultimo.odoo_error} /></span>}
             </div>
           </div>

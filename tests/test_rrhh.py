@@ -281,6 +281,33 @@ def test_la_ficha_de_empleado_se_encuentra_sola_por_correo_o_credencial(entorno,
     assert emp is None and "X999" in motivo
 
 
+def test_el_enlace_automatico_no_pone_la_ficha_que_su_responsable_descarto(entorno):
+    from servicios import rrhh, supa
+    sb, odoo, c = entorno
+    ana = sb.tablas["usuarios"][0]
+    ana.update(odoo_employee_id=None, email="ANA@grupotrimodos.com", codigo=None, vinculo_rechazado=41)
+    emp, motivo = rrhh.empleado(supa.SERVICIO, UID)
+    assert emp is None and "deshacer su enlace" in motivo and "Enlazar con Odoo" in motivo
+    assert ana["odoo_employee_id"] is None
+    ana.update(vinculo_rechazado=99)   # otra ficha descartada: la que encuentra sí vale
+    assert rrhh.empleado(supa.SERVICIO, UID) == (41, None)
+
+
+def test_sin_la_migracion_del_enlace_el_enlace_automatico_sigue_igual(entorno, monkeypatch):
+    from servicios import rrhh, supa
+    sb, odoo, c = entorno
+    ana = sb.tablas["usuarios"][0]
+    ana.update(odoo_employee_id=None, email="ANA@grupotrimodos.com", codigo=None)
+    leer = supa.leer
+
+    def sin_columna(token, tabla, params):
+        if "vinculo_rechazado" in params.get("select", ""):
+            raise supa.FaltaEnBase("No se han podido leer los datos.", 503)
+        return leer(token, tabla, params)
+    monkeypatch.setattr(supa, "leer", sin_columna)
+    assert rrhh.empleado(supa.SERVICIO, UID) == (41, None)
+
+
 def test_chofer_hoy_detecta_camion_de_la_flota_en_modo_simulado(entorno):
     sb, odoo, c = entorno
     r = c.get("/api/chofer/hoy", headers=ANA).json()

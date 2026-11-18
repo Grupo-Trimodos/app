@@ -173,20 +173,29 @@ def guardar_edicion(empleado: int, body: EdicionFicha, u: Usuario = Depends(requ
     return enviar_edicion_empleado(str(body.solicitud))
 
 
-# ---- Enlace de cada persona de la app con Odoo por su móvil (autorizado por Félix el 17-11-2026) -------------------
-# Solo lectura de Odoo. Propone fichas; quien confirma es el responsable desde «Mi equipo → Enlazar con Odoo»
-# (public.confirmar_vinculo_odoo en Supabase). Los teléfonos de Odoo solo se comparan: nunca salen enteros de aquí.
+# ---- Enlace de cada persona de la app con su ficha de Odoo (autorizado por Félix el 17-11-2026) -------------------
+# Solo lectura de Odoo. Propone fichas: a quien entra con código y PIN, por el móvil que ha dado; a quien entra con
+# Microsoft o Google, por su correo (lo mismo que busca odoo_client.buscar_empleado). Si no coincide nada, por nombre.
+# Quien confirma es su responsable desde «Mi equipo → Enlazar con Odoo». La confirmación SOLO sale de aquí: se
+# comprueba que la ficha es una de las que Odoo propone ahora para esa persona y se llama a la función de la base de
+# datos con la clave de servidor, pasando el id de quien confirma (la función vuelve a comprobar sus permisos).
+# Los teléfonos y correos de Odoo solo se comparan: nunca salen enteros de aquí. Solo teléfonos de empresa.
 import re
 
+from .odoo_client import CAMPOS_TELEFONO_EMPRESA, campo_correo_extra
+
 PALABRAS_VACIAS = {"de", "del", "la", "las", "los", "y", "i", "el"}
-CAMPOS_TELEFONO_EMPLEADO = ("mobile_phone", "work_phone", "private_phone")
+CAMPOS_TELEFONO_EMPLEADO = CAMPOS_TELEFONO_EMPRESA   # mobile_phone y work_phone; nunca private_phone
 CAMPOS_TELEFONO_CONDUCTOR = ("mobile", "phone")
+CAMPOS_CORREO_CONDUCTOR = ("email",)
 MAX_POR_NOMBRE = 3
+SIN_MIGRACION = "El enlace con Odoo no está preparado: falta aplicar su migración en Supabase. Avisa a administración."
+SIN_DATOS = "No se ha podido consultar la app. Inténtalo de nuevo en un momento."
 
 
 def normalizar_telefono(texto) -> str | None:
     """Igual que privado.normalizar_telefono en Supabase: solo dígitos y con el prefijo del país (34 para España)."""
-    t = re.sub(r"[\s().·/\-]", "", str(texto or "").replace(" ", ""))
+    t = re.sub(r"[\s().·/\-]", "", str(texto or "").replace(" ", ""))
     if re.fullmatch(r"\+\d+", t):
         t = t[1:]
     elif re.fullmatch(r"00\d+", t):
@@ -200,12 +209,24 @@ def normalizar_telefono(texto) -> str | None:
     return t
 
 
+def final_guardado(t) -> str | None:
+    """Últimas 9 cifras del móvil guardado en la app. Ya está normalizado (solo cifras, con el prefijo del país): no se
+    vuelve a pasar por normalizar_telefono, que rechazaría un número extranjero sin su «+»."""
+    return t[-9:] if isinstance(t, str) and t.isdigit() and len(t) >= 9 else None
+
+
 def finales_telefono(texto) -> set[str]:
     """Últimas 9 cifras de cada número escrito en un campo de Odoo (a veces hay dos: «612… / 698…»)."""
     if not isinstance(texto, str):
         return set()
     partes = re.split(r"[/,;|]|\s[-–]\s|\s(?:o|y)\s", texto)
     return {d[-9:] for d in (re.sub(r"\D", "", p) for p in partes) if len(d) >= 9}
+
+
+def correo_limpio(texto) -> str | None:
+    """Correo para comparar: sin espacios y sin mayúsculas (como el «=ilike» de buscar_empleado)."""
+    t = texto.strip().casefold() if isinstance(texto, str) else ""
+    return t if "@" in t else None
 
 
 def formato_telefono(t: str | None) -> str | None:
@@ -231,9 +252,16 @@ def parecido_nombre(a, b) -> float:
 def _indice_telefonos(registros, campos) -> dict[str, list[int]]:
     indice: dict[str, list[int]] = {}
     for r in registros:
-        numeros = set().union(*(finales_telefono(r.get(c)) for c in campos))
-        for n in numeros:
+        for n in set().union(*(finales_telefono(r.get(c)) for c in campos)):
             indice.setdefault(n, []).append(r["id"])
+    return indice
+
+
+def _indice_correos(registros, campos) -> dict[str, list[int]]:
+    indice: dict[str, list[int]] = {}
+    for r in registros:
+        for correo in {correo_limpio(r.get(c)) for c in campos} - {None}:
+            indice.setdefault(correo, []).append(r["id"])
     return indice
 
 
@@ -252,14 +280,39 @@ def _m2o_nombre(valor) -> str | None:
     return valor[1] if isinstance(valor, (list, tuple)) and len(valor) == 2 else None
 
 
-def _candidatos(persona: dict, actual: int | None, registros: list[dict], indice: dict, ocupados: set[int], ficha) -> list[dict]:
+def _aviso(c: dict) -> str | None:
+    if c["ocupada"]:
+        return "Ya está enlazada con otra persona de la app."
+    if c["compartido"]:
+        return ("Este teléfono está en varias fichas de Odoo: compruébalo." if c["por"] == "telefono"
+                else "Este correo está en varias fichas de Odoo: compruébalo.")
+    if c["por"] == "telefono" and c["movil_repetido"]:
+        return "Este móvil lo han dado varias personas de la app: compruébalo."
+    if c["por"] in ("telefono", "correo") and not c["nombre_parecido"]:
+        return "El nombre no coincide: compruébalo."
+    if c["descartada"]:
+        return "Es la ficha que se quitó al deshacer su enlace: compruébalo."
+    if c["por"] == "nombre":
+        return "Por nombre, compruébalo."
+    if c["por"] == "actual":
+        return "Enlace puesto sin confirmar (por correo, código o en Administración): compruébalo."
+    return None
+
+
+def _candidatos(persona: dict, actual: int | None, registros: list[dict], ind_tel: dict, ind_correo: dict,
+                ocupados: set[int], ficha, rechazada: int | None = None) -> list[dict]:
     por_id = {r["id"]: r for r in registros}
-    telefono = normalizar_telefono(persona.get("telefono"))
-    final = telefono[-9:] if telefono else None
     salida: list[dict] = []
-    por_telefono = indice.get(final, []) if final else []
-    for i in por_telefono:
-        salida.append({**ficha(por_id[i]), "por": "telefono", "telefono_fin": final[-3:], "compartido": len(por_telefono) > 1})
+    if persona.get("con_pin"):   # entra con código y PIN: por el móvil que ha dado
+        final = final_guardado(persona.get("telefono"))
+        coinciden = ind_tel.get(final, []) if final else []
+        salida += [{**ficha(por_id[i]), "por": "telefono", "telefono_fin": final[-3:], "compartido": len(coinciden) > 1}
+                   for i in coinciden]
+    else:                        # entra con Microsoft o Google: por su correo
+        correo = correo_limpio(persona.get("correo"))
+        coinciden = ind_correo.get(correo, []) if correo else []
+        salida += [{**ficha(por_id[i]), "por": "correo", "telefono_fin": None, "compartido": len(coinciden) > 1}
+                   for i in coinciden]
     if not salida:
         parecidos = sorted(((parecido_nombre(persona.get("nombre"), r.get("name")), r) for r in registros), key=lambda x: (-x[0], x[1]["id"]))
         salida += [{**ficha(r), "por": "nombre", "telefono_fin": None, "compartido": False}
@@ -272,28 +325,42 @@ def _candidatos(persona: dict, actual: int | None, registros: list[dict], indice
         c.setdefault("disponible", True)
         c["actual"] = c["id"] == actual
         c["ocupada"] = c["id"] in ocupados and c["id"] != actual
-        c["seguro"] = c["por"] == "telefono" and not c["compartido"] and not c["ocupada"]
-        c["aviso"] = ("Ya está enlazada con otra persona de la app." if c["ocupada"]
-                      else "Este teléfono está en varias fichas de Odoo: compruébalo." if c["compartido"]
-                      else "Por nombre, compruébalo." if c["por"] == "nombre"
-                      else "Enlace puesto sin confirmar (por correo, código o en Administración): compruébalo." if c["por"] == "actual"
-                      else None)
+        c["descartada"] = rechazada is not None and c["id"] == rechazada
+        c["movil_repetido"] = bool(persona.get("telefono_repetido"))
+        c["nombre_parecido"] = parecido_nombre(persona.get("nombre"), c["nombre"]) > 0
+        # Seguro (se marca solo): una sola ficha con su móvil o su correo, libre, con un nombre parecido, no descartada y
+        # con un móvil que no ha dado nadie más en la app (el móvil lo escribe la persona sin verificar).
+        c["seguro"] = (c["por"] in ("telefono", "correo") and not c["compartido"] and not c["ocupada"] and c["nombre_parecido"]
+                       and not c["descartada"] and not (c["por"] == "telefono" and c["movil_repetido"]))
+        c["aviso"] = _aviso(c)
+        del c["movil_repetido"], c["nombre_parecido"]
     return salida
 
 
+def elegible(c: dict) -> bool:
+    """Se puede elegir: está activa en Odoo y no la tiene otra persona de la app (igual que en la pantalla)."""
+    return bool(c.get("disponible")) and not c.get("ocupada")
+
+
 def proponer_vinculos(personas: list[dict], empleados: list[dict], conductores: list[dict], ocupadas: list[dict]) -> dict:
-    """Para cada persona sin enlace confirmado, sus fichas de empleado y contactos conductores candidatos. Por teléfono
-    (últimas 9 cifras) y, si no hay ninguno, por nombre parecido. Sin teléfonos de Odoo: como mucho, sus 3 últimas cifras."""
-    ind_emp = _indice_telefonos(empleados, CAMPOS_TELEFONO_EMPLEADO)
-    ind_con = _indice_telefonos(conductores, CAMPOS_TELEFONO_CONDUCTOR)
+    """Para cada persona sin enlace confirmado, sus fichas de empleado y contactos conductores candidatos. Por su móvil
+    (últimas 9 cifras, solo quien entra con PIN) o su correo (quien entra con Microsoft o Google) y, si no hay ninguno,
+    por nombre parecido. Sin teléfonos ni correos de Odoo: como mucho, las 3 últimas cifras del teléfono."""
+    extra = campo_correo_extra()
+    ind_emp_tel = _indice_telefonos(empleados, CAMPOS_TELEFONO_EMPLEADO)
+    ind_emp_correo = _indice_correos(empleados, ("work_email", *([extra] if extra else [])))
+    ind_con_tel = _indice_telefonos(conductores, CAMPOS_TELEFONO_CONDUCTOR)
+    ind_con_correo = _indice_correos(conductores, CAMPOS_CORREO_CONDUCTOR)
     emp_ocupados = {f["empleado"] for f in ocupadas if f.get("empleado")}
     con_ocupados = {f["conductor"] for f in ocupadas if f.get("conductor")}
     emp_por_id = {e["id"]: e for e in empleados}
     con_por_id = {c["id"]: c for c in conductores}
     pendientes, enlazadas = [], []
     for p in personas:
-        base = {"id": p["id"], "nombre": p.get("nombre") or "Sin nombre", "chofer": bool(p.get("chofer")),
-                "telefono": formato_telefono(p.get("telefono"))}
+        con_pin = bool(p.get("con_pin"))
+        base = {"id": p["id"], "nombre": p.get("nombre") or "Sin nombre", "chofer": bool(p.get("chofer")), "con_pin": con_pin,
+                "telefono": formato_telefono(p.get("telefono")) if con_pin else None,
+                "correo": None if con_pin else (p.get("correo") or None)}
         if p.get("confirmado"):
             emp, con = p.get("odoo_employee_id"), p.get("odoo_conductor_id")
             enlazadas.append({**base, "confirmado": p["confirmado"], "confirmado_por": p.get("confirmado_por"),
@@ -303,28 +370,90 @@ def proponer_vinculos(personas: list[dict], empleados: list[dict], conductores: 
                     "id": con, "nombre": "Contacto no encontrado entre los conductores activos de Odoo"}), "disponible": con in con_por_id}})
             continue
         pendientes.append({**base,
-            "empleados": _candidatos(p, p.get("odoo_employee_id"), empleados, ind_emp, emp_ocupados, _ficha_empleado),
-            "conductores": _candidatos(p, p.get("odoo_conductor_id"), conductores, ind_con, con_ocupados, _ficha_conductor)})
+            "empleados": _candidatos(p, p.get("odoo_employee_id"), empleados, ind_emp_tel, ind_emp_correo, emp_ocupados,
+                                     _ficha_empleado, p.get("vinculo_rechazado")),
+            "conductores": _candidatos(p, p.get("odoo_conductor_id"), conductores, ind_con_tel, ind_con_correo, con_ocupados,
+                                       _ficha_conductor)})
     return {"pendientes": pendientes, "enlazadas": enlazadas}
+
+
+def _personas_y_ocupadas(u: Usuario) -> tuple[list[dict], list[dict]]:
+    """Con la sesión de quien mira: Supabase decide a quién puede enlazar."""
+    try:
+        return supa.leer(u.token, "rpc/personas_para_vincular", {}), supa.leer(u.token, "rpc/fichas_odoo_enlazadas", {})
+    except supa.FaltaEnBase:
+        raise AppError(SIN_MIGRACION, 503, "vinculos_sin_configurar")
+    except AppError:
+        raise AppError(SIN_DATOS, 503, "sin_conexion_datos")
+
+
+def _propuestas(u: Usuario) -> dict:
+    if not u.token:
+        raise AppError("Tienes que iniciar sesión.", 401, "sin_sesion")
+    personas, ocupadas = _personas_y_ocupadas(u)
+    if not personas:
+        return {"pendientes": [], "enlazadas": []}
+    with conexion(u) as c:
+        empleados = c.empleados_para_vincular()
+        conductores = c.conductores_para_vincular()
+    return proponer_vinculos(personas, empleados, conductores, ocupadas)
+
+
+def _con_clave_de_servidor(funcion: str, argumentos: dict, general: str) -> None:
+    try:
+        supa.llamar(supa.SERVICIO, funcion, argumentos, general)
+    except supa.FaltaEnBase:
+        raise AppError(SIN_MIGRACION, 503, "vinculos_sin_configurar")
 
 
 @router.get("/vinculos/pendientes")
 def vinculos_pendientes(u: Usuario = Depends(requiere_permiso("personas.vincular"))):
     """Personas que quien mira puede enlazar (lo decide Supabase con su sesión) y sus fichas candidatas de Odoo."""
+    return {**_propuestas(u), "consultado": datetime.now(timezone.utc).isoformat(),
+            "origen": "Odoo · Empleados y contactos conductores"}
+
+
+class Confirmacion(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    persona: UUID
+    empleado: int = Field(ge=1)
+    conductor: int | None = Field(default=None, ge=1)
+
+
+class Deshacer(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    persona: UUID
+
+
+@router.post("/vinculos/confirmar")
+def confirmar_vinculo(body: Confirmacion, u: Usuario = Depends(requiere_permiso("personas.vincular"))):
+    """«Son la misma persona». Solo una ficha que Odoo propone AHORA para esa persona (activa, de las empresas
+    configuradas y libre), y solo para una persona que quien confirma ve con su sesión. La base de datos comprueba otra
+    vez sus permisos, que la ficha no la tenga nadie y que no tenga la jornada abierta en otra ficha, y lo anota."""
+    datos = _propuestas(u)
+    p = next((x for x in datos["pendientes"] if x["id"] == str(body.persona)), None)
+    if not p:
+        raise AppError("Esta persona ya no está pendiente o no está en tus centros. Recarga la página.", 409, "no_pendiente")
+    if not any(c["id"] == body.empleado and elegible(c) for c in p["empleados"]):
+        raise AppError("Esa ficha de empleado ya no se puede elegir. Recarga la página.", 409, "ficha_no_propuesta")
+    if body.conductor is not None and not any(c["id"] == body.conductor and elegible(c) for c in p["conductores"]):
+        raise AppError("Ese contacto conductor ya no se puede elegir. Recarga la página.", 409, "conductor_no_propuesto")
+    _con_clave_de_servidor("confirmar_vinculo_odoo", {"autor": u.id, "persona": str(body.persona), "empleado": body.empleado,
+                                                      "conductor": body.conductor},
+                           "No se ha podido guardar el enlace. Inténtalo de nuevo.")
+    return {"ok": True, "nombre": p["nombre"]}
+
+
+@router.post("/vinculos/deshacer")
+def deshacer_vinculo(body: Deshacer, u: Usuario = Depends(requiere_permiso("personas.vincular"))):
+    """Deshacer un enlace confirmado de una persona que quien lo pide ve con su sesión. La ficha queda descartada: el
+    enlace automático por correo o código no se la vuelve a poner."""
     if not u.token:
         raise AppError("Tienes que iniciar sesión.", 401, "sin_sesion")
-    try:
-        personas = supa.leer(u.token, "rpc/personas_para_vincular", {})
-        ocupadas = supa.leer(u.token, "rpc/fichas_odoo_enlazadas", {})
-    except AppError:
-        raise AppError("El enlace con Odoo no está preparado: falta aplicar su migración en Supabase. Avisa a administración.",
-                       503, "vinculos_sin_configurar")
-    if not personas:
-        return {"pendientes": [], "enlazadas": [], "consultado": datetime.now(timezone.utc).isoformat(),
-                "origen": "Odoo · Empleados y contactos conductores"}
-    with conexion(u) as c:
-        empleados = c.empleados_para_vincular()
-        conductores = c.conductores_para_vincular()
-    return {**proponer_vinculos(personas, empleados, conductores, ocupadas),
-            "consultado": datetime.now(timezone.utc).isoformat(),
-            "origen": "Odoo · Empleados y contactos conductores"}
+    personas, _ = _personas_y_ocupadas(u)
+    p = next((x for x in personas if x.get("id") == str(body.persona) and x.get("confirmado")), None)
+    if not p:
+        raise AppError("Esta persona no tiene un enlace confirmado o no está en tus centros. Recarga la página.", 409, "no_enlazada")
+    _con_clave_de_servidor("deshacer_vinculo_odoo", {"autor": u.id, "persona": str(body.persona)},
+                           "No se ha podido deshacer el enlace. Inténtalo de nuevo.")
+    return {"ok": True, "nombre": p.get("nombre") or "Sin nombre"}

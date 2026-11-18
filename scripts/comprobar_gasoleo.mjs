@@ -6,6 +6,8 @@
 // las partes de cálculo (textos, datos, calc, gráfica y tabla) y se les da una página de mentira que guarda los textos.
 // Además de los precios reales, prueba dos series inventadas que caen justo en los tramos de C, en los redondeos
 // «del 5» y en el límite de «el mes aún no está completo».
+// Una sola diferencia buscada: el precio o el umbral vacíos recuperados del navegador (null) dan lo mismo que vacíos (ver
+// `probar`); la original los tomaba por 0.
 import { readFileSync } from "node:fs";
 import * as g from "../src/lib/gasoleo.ts";
 
@@ -103,11 +105,25 @@ function comparar(nombre, a, b, caso) {
   if (diferencias <= 15) console.log(`DIFERENCIA en ${nombre}\n  original: ${JSON.stringify(a)}\n  nueva:    ${JSON.stringify(b)}\n  caso: ${JSON.stringify(caso)}`);
 }
 
+// Única diferencia buscada con la original: el precio o el umbral vacíos. Mientras se escribe, un campo vacío es NaN; guardado
+// en el navegador y recuperado, es null (JSON no guarda NaN). La original tomaba null por 0 (isFinite(null) es true): al
+// recargar con el precio vacío daba «0,00 €» y con el umbral vacío, un umbral del 0 %. La nueva trata null como vacío, así
+// que con null se espera lo que la original da con el campo vacío (NaN). Se cuentan aparte los casos en que eso cambia algo.
+let vacios = 0, corregidos = 0;
+const huella = (o, L0) => JSON.stringify([L0.G, L0.C, L0.pct, ...["rDP", "rNP", "rFormula", "rVerdict"].map(o.texto), o.elemento("rVerdict").className]);
+
 function probar(ctx, S, ancho) {
   casos++; porSerie[ctx.nombre] = (porSerie[ctx.nombre] ?? 0) + 1;
   const { original: o, semanas } = ctx;
   o.pagina.ancho = ancho;
-  const L0 = o.calcular(structuredClone(S));
+  let So = S;
+  if (S.price === null || S.thr === null) {
+    vacios++;
+    const conNull = huella(o, o.calcular(structuredClone(S)));
+    So = { ...S, price: S.price ?? NaN, thr: S.thr ?? NaN };
+    if (huella(o, o.calcular(structuredClone(So))) !== conNull) corregidos++;
+  }
+  const L0 = o.calcular(structuredClone(So));
   const e = aEntrada(S), r = g.calcular(semanas, e), t = g.textos(e, r);
   const caso = { serie: ctx.nombre, ancho, ...S };
   // Números
@@ -227,5 +243,6 @@ for (const v of vehiculos) for (const gp of [true, false]) {
 }
 
 for (const s of series) console.log(`  ${s.nombre}: ${porSerie[s.nombre]} combinaciones, ${s.conG} con resultado (G calculado), ${s.semanas.length} semanas`);
+console.log(`  precio o umbral vacíos recuperados del navegador (null): ${vacios} casos, comparados con el campo vacío de la original; en ${corregidos} la original daba otra cosa (0,00 € o umbral del 0 %)`);
 console.log(`${casos} casos comparados (Excel real del ${REAL.fileDate}); diferencias: ${diferencias}`);
 process.exit(diferencias ? 1 : 0);

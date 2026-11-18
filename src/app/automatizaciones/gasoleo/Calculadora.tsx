@@ -208,7 +208,10 @@ function Compartir({ entrada, resultado, fechaExcel }: { entrada: Entrada; resul
       if (resultado.pct == null) { setMensaje({ texto: "Completa las fechas para tener un resultado que compartir." }); return; }
       setOcupado(true);
       try { setMensaje(await compartirResultado(entrada, resultado, fechaExcel)); }
-      catch (err) { setMensaje({ texto: `No se pudo preparar la imagen (${err instanceof Error ? err.message : String(err)}).` }); }
+      catch (err) {
+        console.error("Compartir el resultado del gasóleo:", err);   // el detalle, solo para quien lo revise
+        setMensaje({ texto: "No se ha podido preparar la imagen para compartir. Vuelve a intentarlo o haz una captura de pantalla del resultado." });
+      }
       finally { setOcupado(false); }
     }}>{ocupado ? "Preparando…" : "Compartir resultado"}</button>
     {mensaje && <p className="gasoleo-mensaje" role="status">{mensaje.texto}{mensaje.descargar && <> <button type="button" className="gasoleo-enlace" onClick={mensaje.descargar}>Descargar la imagen</button></>}</p>}

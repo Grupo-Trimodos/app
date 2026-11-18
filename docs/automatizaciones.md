@@ -4,7 +4,9 @@ Sección de la app (`/automatizaciones`) con herramientas que hacen solas un tra
 tarjeta por cada automatización que la persona tiene permitida; quien no tiene ninguna no ve la sección.
 
 No usa base de datos: la lista de automatizaciones está en el código (`src/lib/automatizaciones.ts`) y cada una se da o
-se quita con su permiso en **Administración → Perfiles**.
+se quita con su permiso en **Administración → Perfiles** (no hace falta migración: el permiso es un texto del catálogo).
+El área `automatizaciones` de `src/lib/permisos.json` la pone en el menú y en el inicio (icono «combustible», entre
+Seguridad y Administración) a quien tenga alguno de sus permisos; sin ninguno, ni se ve ni se entra.
 
 ## Añadir una automatización
 
@@ -24,6 +26,14 @@ los RD-ley 9/2026 y 18/2026). Es la calculadora que estaba en GitHub (Revision-G
 las mismas fórmulas y textos; el selector de idioma, la instalación como app aparte y la pantalla de carga no se han
 traído. Lo último que se escribe se recuerda en ese navegador.
 
+Diferencias buscadas con la original (el resto es idéntico):
+- **Campo vacío recordado**: un precio o un umbral vacíos se guardan en el navegador como `null`. La original los tomaba
+  por 0 al volver a abrir la página (importe «0,00 €», umbral del 0 %); aquí cuentan como vacíos, igual que mientras se
+  escribe (importe «—», umbral del 5 %).
+- **Compartir**: la imagen y el texto llevan la dirección de la calculadora en la app (`/automatizaciones/gasoleo`),
+  como la original llevaba la suya. Si no se puede preparar la imagen, un mensaje en español sin detalles técnicos (el
+  detalle queda en la consola del navegador).
+
 - **Cálculo** (`src/lib/gasoleo.ts`): funciones puras, sin pantalla. No se cambia una fórmula sin pasar
   `scripts/comprobar_gasoleo.mjs`, que compara con la original (ver abajo).
 - **Pantalla**: `src/app/automatizaciones/gasoleo/` (`page.tsx` en el servidor, `Calculadora.tsx` en el navegador y
@@ -33,7 +43,8 @@ traído. Lo último que se escribe se recuerda en ese navegador.
   busca el enlace a la Excel semanal y la lee (hojas `PRECIOS_DEL_GASOLEO` y `PRECIOS DE REFERENCIA`). Devuelve el mismo
   formato que el antiguo `data.json`: `fileDate` (fecha de la Excel, sacada de su nombre), `source`, `checkedAt` y `rows`
   (`[serial de Excel, PVP, PVP sin IVA, impuesto, PAI, devolución GP, Pmed ≥ 7,5 t, Pmed < 7,5 t]`, desde 2018).
-  Solo descarga de direcciones `https://…gob.es`. No toca Odoo ni Supabase.
+  Solo descarga de direcciones `https://…gob.es`: se comprueba en el enlace a la Excel y en cada dirección antes de
+  pedirla, también en cada redirección (se siguen a mano, como mucho 10). No toca Odoo ni Supabase.
 - **Copia en memoria**: la Excel descargada se guarda 2 horas en la memoria del proceso; en ese tiempo nadie espera al
   Ministerio. En Vercel cada instancia tiene su copia y la pierde al apagarse: la primera visita después descarga otra vez
   (menos de un segundo en las pruebas). La descarga entera (página, redirecciones y Excel) tiene un plazo de 15 s: la
@@ -61,4 +72,6 @@ node --experimental-strip-types scripts/comprobar_gasoleo.mjs <index.html> <data
 `comprobar_gasoleo.mjs` necesita el `index.html` y un `data.json` de la calculadora original (repositorio
 Revision-Gasoleo). Ejecuta la lógica original sin navegador y la compara con la nueva en unas 18.500 combinaciones
 (precios reales y dos series inventadas que tocan cada tramo de C, los redondeos «del 5» y el mes incompleto): números,
-textos, gráfica y tabla de semanas. Debe acabar con «diferencias: 0».
+textos, gráfica y tabla de semanas. Debe acabar con «diferencias: 0». En los casos con el precio o el umbral recordados
+vacíos (`null`), lo esperado es lo que da la original con el campo vacío; el script dice cuántos son y en cuántos la
+original daba otra cosa.

@@ -1,11 +1,13 @@
 import "server-only";
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { eventoOutlook, instanteDeOutlook, type DatosEvento } from "@/lib/calendario";
 import { inicioDia, NOMBRE_AUSENCIA, ZONA } from "@/lib/jornada";
 import { sumarDias } from "@/lib/seguridad";
 
 /**
- * Calendario de Outlook (Microsoft Graph) de quien entra con Microsoft: agenda de hoy y ausencias aprobadas.
+ * Calendario de Outlook (Microsoft Graph) de quien entra con Microsoft: agenda de hoy, ausencias aprobadas y, en
+ * /calendario, sus citas del mes y las notas o fechas señaladas que decida copiar en su Outlook (docs/calendario.md).
  * Al entrar, Microsoft da un token de renovación; se guarda CIFRADO (tabla microsoft_tokens, solo la clave de servidor)
  * y con él se pide un token de Graph cada vez que hace falta. Quien entra con código + PIN no tiene calendario.
  *
@@ -85,23 +87,65 @@ async function graph(token: string, ruta: string, init: { method?: string; body?
   }).catch(() => null);
 }
 
-export type Cita = { asunto: string; inicio: string; fin: string; todoElDia: boolean; lugar: string | null; enlace: string | null };
+export type Cita = {
+  id: string | null; asunto: string; inicio: string; fin: string; todoElDia: boolean; lugar: string | null; enlace: string | null;
+  /** Los mismos inicio y fin como instantes (para el calendario). */
+  empieza: string | null; termina: string | null;
+};
+
+/** Citas de su Outlook en [desde, hasta). null: sin conectar o Microsoft no responde. */
+async function leerCitas(token: string, desde: Date, hasta: Date, cuantas: number): Promise<Cita[] | null> {
+  const res = await graph(token, `/me/calendarView?startDateTime=${desde.toISOString()}&endDateTime=${hasta.toISOString()}`
+    + `&$select=id,subject,start,end,isAllDay,location,webLink,isCancelled&$orderby=start/dateTime&$top=${cuantas}`);
+  if (!res?.ok) return null;
+  type Evento = { id?: string; subject?: string; start?: { dateTime: string }; end?: { dateTime: string }; isAllDay?: boolean;
+    location?: { displayName?: string }; webLink?: string; isCancelled?: boolean };
+  const { value = [] } = (await res.json().catch(() => ({}))) as { value?: Evento[] };
+  return value.filter((e) => !e.isCancelled && e.start && e.end).map((e) => ({
+    id: e.id ?? null, asunto: e.subject || "(Sin asunto)", inicio: e.start!.dateTime, fin: e.end!.dateTime, todoElDia: !!e.isAllDay,
+    lugar: e.location?.displayName || null, enlace: e.webLink ?? null,
+    empieza: instanteDeOutlook(e.start!.dateTime), termina: instanteDeOutlook(e.end!.dateTime),
+  }));
+}
 
 /** Citas de hoy (hora de Madrid) de su Outlook. null: sin conectar (tiene que volver a entrar con Microsoft). */
 export async function agendaDeHoy(usuarioId: string): Promise<Cita[] | null> {
   const token = await tokenGraph(usuarioId);
   if (!token) return null;
-  const desde = inicioDia().toISOString(), hasta = inicioDia(-1).toISOString();
-  const res = await graph(token, `/me/calendarView?startDateTime=${desde}&endDateTime=${hasta}`
-    + "&$select=subject,start,end,isAllDay,location,webLink,isCancelled&$orderby=start/dateTime&$top=30");
-  if (!res?.ok) return null;
-  type Evento = { subject?: string; start?: { dateTime: string }; end?: { dateTime: string }; isAllDay?: boolean;
-    location?: { displayName?: string }; webLink?: string; isCancelled?: boolean };
-  const { value = [] } = (await res.json().catch(() => ({}))) as { value?: Evento[] };
-  return value.filter((e) => !e.isCancelled && e.start && e.end).map((e) => ({
-    asunto: e.subject || "(Sin asunto)", inicio: e.start!.dateTime, fin: e.end!.dateTime, todoElDia: !!e.isAllDay,
-    lugar: e.location?.displayName || null, enlace: e.webLink ?? null,
-  }));
+  return leerCitas(token, inicioDia(), inicioDia(-1), 30);
+}
+
+/** Citas de su Outlook en un periodo (el mes que mira en /calendario). Como mucho 300. null: sin conectar. */
+export async function citasEntre(usuarioId: string, desde: Date, hasta: Date): Promise<Cita[] | null> {
+  const token = await tokenGraph(usuarioId);
+  if (!token) return null;
+  return leerCitas(token, desde, hasta, 300);
+}
+
+/** Copia una nota o una fecha señalada en su Outlook. Devuelve el id del evento, o null si no se ha podido.
+ *  «transaccion» evita que un reintento cree el mismo evento dos veces. Es un envío a Microsoft, nunca a Odoo. */
+export async function crearEventoOutlook(usuarioId: string, datos: DatosEvento, transaccion: string): Promise<string | null> {
+  const token = await tokenGraph(usuarioId);
+  if (!token) return null;
+  const res = await graph(token, "/me/events", { method: "POST", body: eventoOutlook(datos, transaccion) });
+  const evento = res?.ok ? ((await res.json().catch(() => null)) as { id?: string } | null) : null;
+  return evento?.id ?? null;
+}
+
+/** Cambia en su Outlook el evento de una nota que ha cambiado. */
+export async function cambiarEventoOutlook(usuarioId: string, eventoId: string, datos: DatosEvento): Promise<boolean> {
+  const token = await tokenGraph(usuarioId);
+  if (!token) return false;
+  const res = await graph(token, `/me/events/${encodeURIComponent(eventoId)}`, { method: "PATCH", body: eventoOutlook(datos) });
+  return !!res?.ok;
+}
+
+/** Borra de su Outlook el evento de una nota. Si ya no estaba, cuenta como borrado. */
+export async function borrarEventoOutlook(usuarioId: string, eventoId: string): Promise<boolean> {
+  const token = await tokenGraph(usuarioId);
+  if (!token) return false;
+  const res = await graph(token, `/me/events/${encodeURIComponent(eventoId)}`, { method: "DELETE" });
+  return !!res && (res.ok || res.status === 404);
 }
 
 /** Al aprobarse una ausencia, se apunta en el Outlook de esa persona (como «fuera de la oficina»). Una sola vez. */

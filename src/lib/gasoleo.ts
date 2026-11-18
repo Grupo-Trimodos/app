@@ -52,8 +52,10 @@ export const fmtFecha = (ms: number) => {
   const d = new Date(ms);
   return String(d.getUTCDate()).padStart(2, "0") + "/" + String(d.getUTCMonth() + 1).padStart(2, "0") + "/" + d.getUTCFullYear();
 };
-/** Igual que el isFinite global del original: null cuenta como 0 (un campo vacío guardado como null). */
-const finito = (x: unknown) => isFinite(x as number);
+/** Número de verdad. Un campo vacío llega como NaN mientras se escribe y como null al recuperarlo del navegador (JSON
+ *  guarda NaN como null): los dos cuentan como vacío. El original usaba el isFinite global, que toma null por 0, y al
+ *  recargar con el precio vacío daba «0,00 €» (y un umbral vacío pasaba a ser 0 %) en vez de «—» y el 5 %. */
+const finito = (x: unknown): x is number => typeof x === "number" && isFinite(x);
 
 // ---- Números en formato español ----
 export const nf = (v: number | null | undefined, d: number) =>

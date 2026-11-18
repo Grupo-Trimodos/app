@@ -13,6 +13,7 @@ Reglas y bases del proyecto: [`../AGENTS.md`](../AGENTS.md). Puesta en marcha: [
 | [deca.md](deca.md) | DECA: reglas y lecciones |
 | [viajes.md](viajes.md) | Mis viajes: órdenes de transporte del chófer, pasos de carga y descarga y seguimiento |
 | [argon.md](argon.md) | ARGON: pedidos de Carburos desde n8n |
+| [calendario.md](calendario.md) | Calendario: notas propias, fechas señaladas por centro o equipo y Outlook para quien entra con Microsoft |
 | [automatizaciones.md](automatizaciones.md) | Automatizaciones: cómo se añade una y la revisión del precio por gasóleo |
 | [otras-funciones.md](otras-funciones.md) | Seguridad, cuadro de mando, ropa, zonas y calendario (ocultas en el piloto) |
 | [nueva-funcion.md](nueva-funcion.md) | Cómo se añade una función (fuera del piloto) |

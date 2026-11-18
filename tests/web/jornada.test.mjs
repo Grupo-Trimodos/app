@@ -116,3 +116,116 @@ test('presentación: no presentar como última jornada válida un turno con inci
   assert.equal(j.presentarJornada(r, ahora).minutos, 0);
   assert.equal(r.incidencias.length, 1);
 });
+
+// ---- Pantalla del trabajador: vistaDelDia (contador grande, «Hoy», la semana frente a las 40 h) ----
+const vista = (pares, ahora) => j.vistaDelDia(fichajes(pares), new Date(ahora));
+const H = 3600000;
+
+test('trabajador: turno de noche terminado cuenta «hoy» entero y la semana por su día de entrada', () => {
+  // Martes 22:00 → miércoles 6:00. El miércoles a las 8:00: 8 h hoy, nunca «0 h».
+  const pares = [['entrada', '2026-11-17T22:00:00+01:00'], ['salida', '2026-11-18T06:00:00+01:00']];
+  const v = vista(pares, '2026-11-18T08:00:00+01:00');
+  assert.equal(v.estado, 'fuera');
+  assert.equal(v.terminadaHoy, true);
+  assert.equal(v.etiqueta, 'Hoy has trabajado');
+  assert.equal(v.msGrande, 8 * H);
+  assert.equal(v.msSemana, 8 * H);
+  assert.equal(j.horaCorta(v.desde), '6:00');
+  // Al día siguiente ya no es «hoy», pero sigue en la semana.
+  const jueves = vista(pares, '2026-11-19T08:00:00+01:00');
+  assert.equal(jueves.msGrande, 0);
+  assert.equal(jueves.terminadaHoy, false);
+  assert.equal(jueves.msSemana, 8 * H);
+});
+test('trabajador: turno de noche abierto avanza solo y dice que empezó ayer', () => {
+  const pares = [['entrada', '2026-11-17T22:00:00+01:00']];
+  const a = vista(pares, '2026-11-18T01:00:00+01:00');
+  const b = vista(pares, '2026-11-18T01:00:07+01:00');
+  assert.equal(a.estado, 'trabajando');
+  assert.equal(a.desdeAyer, true);
+  assert.equal(a.etiqueta, 'Llevas en esta jornada');
+  assert.equal(a.msGrande, 3 * H);
+  assert.equal(b.msGrande - a.msGrande, 7000);
+  assert.deepEqual(j.partesDuracion(b.msGrande), { h: 3, min: 0, seg: 7 });
+  assert.equal(a.msSemana, 3 * H);
+});
+test('trabajador: domingo noche a lunes no entra en la semana nueva (regla de imputación de la app)', () => {
+  const pares = [['entrada', '2026-11-15T22:00:00+01:00'], ['salida', '2026-11-16T06:00:00+01:00']];
+  const v = vista(pares, '2026-11-16T09:00:00+01:00');
+  assert.equal(v.msGrande, 8 * H);
+  assert.equal(v.msSemana, 0);
+});
+for (const [nombre, entrada, salida, ahora, horas] of [
+  ['octubre', '2026-10-24T22:00:00+02:00', '2026-10-25T06:00:00+01:00', '2026-10-25T09:00:00+01:00', 9],
+  ['marzo', '2027-03-27T22:00:00+01:00', '2027-03-28T06:00:00+02:00', '2027-03-28T09:00:00+02:00', 7],
+]) test(`trabajador: cambio de hora de ${nombre}, tiempo real transcurrido`, () => {
+  const v = vista([['entrada', entrada], ['salida', salida]], ahora);
+  assert.equal(v.msGrande, horas * H);
+  // El sábado de entrada y el domingo del cambio son de la misma semana (de lunes a domingo).
+  assert.equal(v.msSemana, horas * H);
+  // Abierta a mitad de la noche del cambio: también cuenta horas reales.
+  const abierta = vista([['entrada', entrada]], salida);
+  assert.equal(abierta.msGrande, horas * H);
+});
+test('trabajador: las pausas no cuentan y la pausa dice desde cuándo', () => {
+  const pares = [['entrada', '2026-11-18T07:00:00+01:00'], ['pausa', '2026-11-18T10:30:00+01:00']];
+  const enPausa = vista(pares, '2026-11-18T11:00:00+01:00');
+  assert.equal(enPausa.estado, 'pausa');
+  assert.equal(j.lasHora(enPausa.desde), 'las 10:30');
+  assert.equal(enPausa.msGrande, 3.5 * H);
+  const vuelta = vista([...pares, ['reanudar', '2026-11-18T11:00:00+01:00']], '2026-11-18T12:00:00+01:00');
+  assert.equal(vuelta.estado, 'trabajando');
+  assert.equal(j.lasHora(vuelta.desde), 'las 7:00');
+  assert.equal(vuelta.msGrande, 4.5 * H);
+});
+test('trabajador: jornada partida suma «hoy en total» y deja volver a fichar la entrada', () => {
+  const manana = [['entrada', '2026-11-18T08:00:00+01:00'], ['salida', '2026-11-18T14:00:00+01:00']];
+  const entre = vista(manana, '2026-11-18T15:00:00+01:00');
+  assert.equal(entre.estado, 'fuera');
+  assert.deepEqual(j.SIGUIENTES[entre.estado], ['entrada']);
+  assert.equal(entre.msGrande, 6 * H);
+  const tarde = vista([...manana, ['entrada', '2026-11-18T16:00:00+01:00']], '2026-11-18T18:00:00+01:00');
+  assert.equal(tarde.msGrande, 2 * H);
+  assert.equal(tarde.msHoyTotal, 8 * H);
+  assert.equal(tarde.msSemana, 8 * H);
+  const fin = vista([...manana, ['entrada', '2026-11-18T16:00:00+01:00'], ['salida', '2026-11-18T18:30:00+01:00']], '2026-11-18T19:00:00+01:00');
+  assert.equal(fin.msGrande, 8.5 * H);
+  assert.equal(j.lasHora(fin.desde), 'las 18:30');
+});
+test('trabajador: jornada abierta de otro día pasada de 16 h queda como olvido y sin botones', () => {
+  const v = vista([['entrada', '2026-11-17T07:00:00+01:00']], '2026-11-18T08:00:00+01:00');
+  assert.equal(v.estado, 'pendiente');
+  assert.ok(v.olvido);
+  assert.equal(v.msGrande, 0);
+  assert.equal(v.msSemana, 0);
+  assert.deepEqual(j.SIGUIENTES[v.estado], []);
+  assert.equal(j.textoOlvido(v.olvido, new Date('2026-11-18T08:00:00+01:00')), 'Ayer no fichaste la salida. Tu responsable la cerrará con la hora real.');
+  const antes = vista([['entrada', '2026-11-16T07:00:00+01:00']], '2026-11-18T08:00:00+01:00');
+  assert.match(j.textoOlvido(antes.olvido, new Date('2026-11-18T08:00:00+01:00')), /^El lunes 16 de noviembre no fichaste la salida/);
+});
+test('trabajador: semana de lunes a domingo, objetivo de 40 horas', () => {
+  const dia = (d) => [['entrada', `2026-11-${d}T08:00:00+01:00`], ['salida', `2026-11-${d}T16:00:00+01:00`]];
+  const pares = ['15', '16', '17', '18', '19', '20', '21', '22'].flatMap(dia);   // domingo 15 → domingo 22
+  const domingo = vista(pares, '2026-11-22T20:00:00+01:00');
+  assert.equal(domingo.msSemana, 7 * 8 * H);   // del lunes 16 al domingo 22
+  assert.equal(domingo.msObjetivo, 40 * H);
+  assert.equal(j.lunesDe('2026-11-22'), '2026-11-16');
+  assert.equal(j.lunesDe('2026-11-16'), '2026-11-16');
+  const lunes = vista([...pares, ...dia('23')], '2026-11-23T20:00:00+01:00');
+  assert.equal(lunes.msSemana, 8 * H);
+  assert.equal(j.duracionMs(27 * H + 40 * 60000 + 59000), '27 h 40 min');
+});
+test('trabajador: fichajes por revisar no se suman y se avisa', () => {
+  const v = vista([['entrada', '2026-11-18T07:00:00+01:00'], ['entrada', '2026-11-18T08:00:00+01:00'], ['salida', '2026-11-18T15:00:00+01:00']], '2026-11-18T16:00:00+01:00');
+  assert.equal(v.revisar, true);
+  assert.equal(v.msGrande, 0);
+  assert.equal(v.msSemana, 0);
+});
+test('textos de fechas y horas para el trabajador', () => {
+  assert.equal(j.rangoDias('2026-12-14', '2026-12-18'), 'del 14 al 18 de diciembre');
+  assert.equal(j.rangoDias('2026-12-29', '2027-01-02'), 'del 29 de diciembre al 2 de enero');
+  assert.equal(j.rangoDias('2026-12-14', '2026-12-14'), 'el 14 de diciembre');
+  assert.equal(j.lasHora('2026-11-18T00:05:00Z'), 'la 1:05');
+  assert.equal(j.lasHora('2026-11-18T06:02:00Z'), 'las 7:02');
+  assert.equal(j.diaLargo('2026-11-16'), 'lunes 16 de noviembre');
+});

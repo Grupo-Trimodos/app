@@ -1,7 +1,8 @@
 /**
  * «Compartir resultado»: una imagen con el cálculo para mandarla por WhatsApp (como la calculadora original).
  * Móvil: el menú de compartir del sistema. Ordenador: la imagen al portapapeles para pegarla con Ctrl+V; si no se puede,
- * se descarga y se copia el resumen en texto. Solo en el navegador; no sale nada hacia el servidor.
+ * se descarga y se copia el resumen en texto. La imagen y el texto llevan la dirección de la calculadora en la app.
+ * Solo en el navegador; no sale nada hacia el servidor.
  */
 import {
   NOMBRE_BASE, VEHICULOS, detallePeriodo, etiquetaPeriodo, fmtFecha, isoAMs, nf, pc, textos,
@@ -9,6 +10,9 @@ import {
 } from "@/lib/gasoleo";
 
 const ARCHIVO = "revision-gasoleo.png";
+/** Página de la calculadora en la app: va al pie de la imagen y al final del texto (como la original con la suya). */
+const RUTA = "/automatizaciones/gasoleo";
+const direccion = () => location.origin + RUTA;
 const FUENTE = 'Atkinson, system-ui, "Segoe UI", sans-serif';
 const TINTA = "#182737", SUAVE = "#617082", AZUL = "#182d3e", AMARILLO = "#fcda00", REF = "#355d85", REAL = "#8a6b0a", VERDE = "#16734f";
 
@@ -74,6 +78,8 @@ async function imagen(e: Entrada, r: Resultado, fechaExcel: string): Promise<Blo
   x.fillStyle = t.veredictoClase === "ok" ? VERDE : REAL; x.font = `800 28px ${FUENTE}`; x.fillText(t.veredicto, 60, 1232);
   const pie = "Precios: Ministerio de Transportes (Excel del " + fmtFecha(isoAMs(fechaExcel)) + ") · Ley 15/2009, art. 38 · Cálculo orientativo";
   x.fillStyle = SUAVE; ajustar(x, pie, W - 120, 22, 500); x.fillText(pie, 60, 1274);
+  const web = location.host + RUTA;
+  x.fillStyle = VERDE; ajustar(x, web, W - 120, 24, 700); x.fillText(web, 60, 1312);
   return new Promise((ok, mal) => c.toBlob((b) => (b ? ok(b) : mal(new Error("imagen vacía"))), "image/png"));
 }
 
@@ -81,7 +87,7 @@ function resumen(e: Entrada, r: Resultado) {
   return "Revisión del precio del transporte por gasóleo\n"
     + `Referencia (${etiquetaPeriodo(e.referencia)}): ${nf(r.rv, 5)} €/l\n`
     + `Cálculo (${etiquetaPeriodo(e.realizacion)}): ${nf(r.tv, 5)} €/l\n`
-    + `Variación del gasóleo (G): ${pc(r.G, r.gd, true)}\nCoeficiente C: ${nf(r.C, 2)}\nVariación del transporte: ${pc(r.pct, 2, true)}`;
+    + `Variación del gasóleo (G): ${pc(r.G, r.gd, true)}\nCoeficiente C: ${nf(r.C, 2)}\nVariación del transporte: ${pc(r.pct, 2, true)}\n${direccion()}`;
 }
 
 function descargar(blob: Blob) {

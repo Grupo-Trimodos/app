@@ -251,6 +251,33 @@ def test_sigue_las_redirecciones_dentro_del_plazo(ministerio, monkeypatch):
             gasoleo._bajar(http, "https://www.transportes.gob.es/otra.xlsx", ministerio.reloj["t"] + 20)
 
 
+@pytest.mark.parametrize("destino", [
+    "https://otra-web.com/preciogasoleo.xlsx",                     # fuera de la Administración
+    "http://www.transportes.gob.es/preciogasoleo.xlsx",            # la misma web, sin https
+    "https://transportes.gob.es.otra-web.com/preciogasoleo.xlsx",  # se hace pasar por .gob.es
+    "https://www.gob.es@otra-web.com/preciogasoleo.xlsx",          # usuario «www.gob.es» en otra web
+])
+def test_cada_redireccion_tiene_que_ser_https_de_gob_es(ministerio, destino):
+    """Las redirecciones se siguen a mano: cada salto se comprueba antes de pedirlo, también el segundo y siguientes."""
+    def handler(request):
+        ministerio.peticiones.append(str(request.url))
+        if request.url.path == "/movida.xlsx":                   # un primer salto bueno, dentro de gob.es
+            return httpx.Response(302, headers={"Location": "https://sede.transportes.gob.es/otra-vez.xlsx"})
+        return httpx.Response(302, headers={"Location": destino})
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as http:
+        with pytest.raises(gasoleo.MinisterioError, match="no es de la web del Ministerio"):
+            gasoleo._bajar(http, "https://www.transportes.gob.es/movida.xlsx", ministerio.reloj["t"] + 20)
+    assert ministerio.peticiones == ["https://www.transportes.gob.es/movida.xlsx", "https://sede.transportes.gob.es/otra-vez.xlsx"]
+
+
+def test_no_se_pide_una_primera_direccion_fuera_de_gob_es(ministerio):
+    with httpx.Client(transport=httpx.MockTransport(ministerio.handler)) as http:
+        with pytest.raises(gasoleo.MinisterioError, match="no es de la web del Ministerio"):
+            gasoleo._bajar(http, "https://otra-web.com/preciogasoleo.xlsx", ministerio.reloj["t"] + 20)
+    assert ministerio.peticiones == []
+
+
 def test_no_se_espera_sin_limite_a_otra_descarga(ministerio, monkeypatch):
     monkeypatch.setattr(gasoleo, "ESPERA_CERROJO", 0.01)
     assert gasoleo._cerrojo.acquire(timeout=1)                   # otra visita está descargando

@@ -113,10 +113,10 @@ def main():
             assert servidor(f"select count(*) - count(distinct x) from public.perfiles, unnest(permisos) x where nombre='{perfil}';") == '0', perfil
         print('OK: «viajes.usar» lo tiene Chófer; «viajes.seguimiento», Responsable y Administrador', flush=True)
 
-        # Enlaces confirmados por cada responsable (TAREA 1). La 9 se enlaza antes de darla de baja.
-        valor(4, f"select public.confirmar_vinculo_odoo('{uid(1)}', 10, 900);")
-        valor(5, f"select public.confirmar_vinculo_odoo('{uid(2)}', 20, 901);")
-        valor(4, f"select public.confirmar_vinculo_odoo('{uid(9)}', 90, 909);")
+        # Enlaces confirmados por cada responsable (TAREA 1). La 9 se enlaza antes de darla de baja. La confirmación solo
+        # la hace el servidor (clave de servidor) en nombre de quien confirma: scripts/prueba_vinculo_db.py.
+        for autor, persona, empleado, conductor in ((4, 1, 10, 900), (5, 2, 20, 901), (4, 9, 90, 909)):
+            servidor(f"set role service_role; select public.confirmar_vinculo_odoo('{uid(autor)}', '{uid(persona)}', {empleado}, {conductor});")
         servidor(f"update public.usuarios set activo=false where id='{uid(9)}';")
 
         # El chófer marca su paso; la base de datos pone su conductor y la hora (no se puede antedatar).

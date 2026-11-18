@@ -141,17 +141,27 @@ Autorizado por Félix. Funcionamiento y permisos: [acceso-y-perfiles.md](acceso-
 
 **Qué alcanza:**
 - **Lecturas nuevas** (`odoo_client.py`, solo `search_read`, dominios fijos): `empleados_para_vincular` (`hr.employee`
-  activos de `ODOO_COMPANY_IDS`: nombre, empresa, departamento, puesto y `work_phone`, `mobile_phone`, `private_phone`)
-  y `conductores_para_vincular` (`res.partner` activos con `is_driver` del grupo, mismo criterio que los avisos de
-  flota: nombre, contacto padre, empresa, `phone`, `mobile`). Los teléfonos solo se comparan; la ruta nunca los devuelve
-  enteros (como mucho las 3 últimas cifras). La ruta `GET /api/odoo/vinculos/pendientes` exige `personas.vincular`.
+  activos de `ODOO_COMPANY_IDS`: nombre, empresa, departamento, puesto, los teléfonos de empresa `mobile_phone` y
+  `work_phone` —**nunca `private_phone`**— y los mismos correos que busca `buscar_empleado`: `work_email` y, si está
+  configurado, el campo de `ODOO_CAMPO_CORREO`) y `conductores_para_vincular` (`res.partner` activos con `is_driver` del
+  grupo, mismo criterio que los avisos de flota: nombre, contacto padre, empresa, `phone`, `mobile`, `email`). Teléfonos
+  y correos solo se comparan; la ruta nunca los devuelve (del teléfono, como mucho las 3 últimas cifras). El móvil solo
+  se compara para quien entra con código y PIN; el correo, para quien entra con Microsoft o Google. Las rutas
+  `GET /api/odoo/vinculos/pendientes`, `POST /api/odoo/vinculos/confirmar` y `POST /api/odoo/vinculos/deshacer` exigen
+  `personas.vincular`.
 - **Envíos que dependen del enlace:** los mismos de antes, sin cambiar su código. Fichajes (`hr.attendance`: abrir y
   cerrar asistencias) y ausencias aprobadas (`hr.leave`: crear la solicitud) se envían al `odoo_employee_id` de la
   persona. Confirmar o deshacer un enlace cambia a qué ficha van **los envíos que salgan a partir de ese momento**.
   `odoo_conductor_id` no se usa en ningún envío.
 - **Quién lo provoca:** el responsable o la administración al pulsar «Son la misma persona» o «Deshacer» en
-  `/equipo/odoo`. Siguen como antes el campo de Administración → Personas y el enlace automático por correo de trabajo o
-  código de credencial (`rrhh.empleado`); ahora, si cambian la ficha, el enlace queda sin confirmar y se anota.
+  `/equipo/odoo`. La escritura en Supabase la hace **solo el servidor**, con la clave de servidor, después de comprobar
+  contra Odoo que la ficha es una de las propuestas para esa persona; la base de datos vuelve a comprobar los permisos
+  de quien confirma (detalle en [acceso-y-perfiles.md](acceso-y-perfiles.md#enlace-con-odoo-por-el-móvil-17-11-2026)).
+  Siguen como antes el campo de Administración → Personas y el enlace automático por correo de trabajo o código de
+  credencial (`rrhh.empleado`); ahora, si cambian la ficha, el enlace queda sin confirmar y se anota.
+- **Jornada abierta:** si el último fichaje de la persona es una entrada (o reanudación) ya enviada a Odoo, no se puede
+  cambiar su ficha ni deshacer el enlace hasta que fiche la salida. Si no, la salida iría a otra ficha, fallaría («no hay
+  ninguna entrada abierta que cerrar»), pararía sus envíos y dejaría la asistencia abierta en la primera.
 - **Registros que ya existen:** en Odoo, ninguno se toca. En la app, a 17-11-2026 ninguna persona tenía
   `odoo_employee_id`.
 
@@ -170,12 +180,16 @@ Autorizado por Félix. Funcionamiento y permisos: [acceso-y-perfiles.md](acceso-
   ya hay una viva de esa ficha con las mismas fechas.
 - Lo ya **enviado** a una ficha equivocada (por ejemplo, por un enlace automático erróneo) se queda en esa ficha. Deshacer
   o cambiar el enlace no lo mueve; se corrige a mano en Odoo (`AGENTS.md`, norma 9).
-- Tras **deshacer**, la persona se queda sin ficha. El siguiente envío vuelve a buscarla por correo o código; si no la
-  encuentra, sus fichajes quedan «sin empleado».
+- Tras **deshacer**, la persona se queda sin ficha y la ficha que tenía queda descartada (`usuarios.vinculo_rechazado`).
+  El siguiente envío vuelve a buscarla por correo o código, pero **no usa la descartada** (`rrhh.empleado`, y la base de
+  datos tampoco deja guardarla): sus fichajes quedan «sin empleado», con el motivo, hasta que su responsable confirme
+  una ficha. Si encuentra otra distinta, la usa como antes (sin confirmar). Sin la migración, la columna no existe y
+  todo sigue como antes.
 
 **Comprobación del 17-11-2026** (solo lecturas por API contra producción, Odoo 18, empresas 1 y 7; **no hay Odoo de
 pruebas**: falta `.env.pruebas`):
-- 129 fichas activas; 97 con algún teléfono (84 `work_phone`, 24 `mobile_phone`, 14 `private_phone`). Solo hay 39
+- 129 fichas activas; 97 con algún teléfono (84 `work_phone`, 24 `mobile_phone`, 14 `private_phone`; desde el
+  18-11-2026 `private_phone` ya no se lee ni se compara). Solo hay 39
   números distintos: 7 se repiten en varias fichas y cubren 85 de ellas (teléfonos de centro). Simulando que cada ficha
   con teléfono es una persona que da ese número, solo 29 reciben una propuesta segura de su propia ficha; el resto sale
   como «está en varias fichas: compruébalo». **La mayoría de enlaces se decidirán por nombre y empresa, no por el
@@ -186,3 +200,10 @@ pruebas**: falta `.env.pruebas`):
   Odoo (`AGENTS.md`, normas 2, 3 y 7), ni comparar estas cifras con la pantalla de Odoo. Antes de que los responsables
   empiecen a confirmar enlaces en producción hay que avisar a Félix. Lo prudente: confirmar primero una sola persona,
   dejar que fiche una vez, leer la asistencia en Odoo y comparar empleado, empresa y hora (UTC y Madrid) antes de seguir.
+- **Cambios del 18-11-2026 (sin comprobar contra Odoo):** se quitó `private_phone` de la lectura, se añadieron los
+  correos (`work_email`, el campo de `ODOO_CAMPO_CORREO` y `email` del contacto conductor) y `rrhh.empleado` respeta la
+  ficha descartada. No se ha hecho ninguna lectura nueva de Odoo para medirlo: no se sabe cuántas fichas tienen el correo
+  de trabajo de quien entra con Microsoft. Sigue sin haber Odoo de pruebas (falta `.env.pruebas`), así que sigue sin
+  comprobarse nada de las normas 2 a 8 de `AGENTS.md` (casos de fichajes y ausencias en una ficha enlazada, lectura de
+  vuelta, `comprobar_compatibilidad` y `comprobar_permisos`). **No se aplica la migración en producción ni se despliega
+  esta función hasta tenerlo o hasta que Félix lo decida.**

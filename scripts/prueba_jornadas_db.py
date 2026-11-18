@@ -1,8 +1,9 @@
 """Pruebas reales de PostgreSQL en un contenedor Docker LOCAL explícito; no lee archivos de entorno.
 
-Uso: python3 -m scripts.prueba_jornadas_db --contenedor trimodos-jornada-pruebas
+Uso: python3 -m scripts.prueba_jornadas_db --contenedor trimodos-jornada-pruebas [--como-produccion]
 Crea una base temporal con las migraciones del repo y datos ficticios. La elimina al terminar.
 --sin-arreglo ejecuta la regresión contra las migraciones anteriores (debe fallar).
+--como-produccion salta las migraciones que aún no están en producción (20261116000000 y 20261117000000).
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor
@@ -12,12 +13,14 @@ import uuid
 
 RAIZ = Path(__file__).resolve().parents[1]
 NUEVA = '20261110000000_jornadas_pendientes.sql'
+NO_EN_PRODUCCION = {'20261116000000_grupos_de_trabajo.sql', '20261117000000_ediciones_empleados.sql'}
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--contenedor', required=True, choices=['trimodos-jornada-pruebas'])
     parser.add_argument('--sin-arreglo', action='store_true')
+    parser.add_argument('--como-produccion', action='store_true')
     args = parser.parse_args()
     db = 'jornadas_test_' + uuid.uuid4().hex
 
@@ -46,6 +49,8 @@ def main():
         """)
         for p in sorted((RAIZ / 'supabase/migrations').glob('*.sql')):
             if args.sin_arreglo and p.name == NUEVA:
+                continue
+            if args.como_produccion and p.name in NO_EN_PRODUCCION:
                 continue
             sql(p.read_text())
         sql("""

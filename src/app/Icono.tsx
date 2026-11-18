@@ -28,6 +28,7 @@ export const trazos: Record<string, ReactNode> = {
   euro: <><path d="M18 6.5A7 7 0 1 0 18 17.5M4 10h10M4 14h10" /></>,
   edificio: <><path d="M4 21V4h11v17M15 9h5v12M2 21h20M8 8h3M8 12h3M8 16h3" /></>,
   grafica: <><path d="M4 20V4M4 20h16M8 16v-4M12 16V8M16 16v-6" /></>,
+  herramienta: <><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z" /></>,
 };
 
 /** Iconos propios, ligeros y sin dependencias. El texto del control aporta su nombre accesible. */

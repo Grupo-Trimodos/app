@@ -31,6 +31,22 @@ for (const [nombre, o] of Object.entries(ORIGINAL)) test(`igual que la original:
   assert.equal("pill " + t.veredictoClase, o.clase);
 });
 
+test("precio y umbral vacíos recuperados del navegador (null) cuentan como vacíos, no como 0", () => {
+  const S = ORIGINAL["julio por mes (RDL 18)"].S;
+  const guardado = JSON.parse(JSON.stringify({ ...entrada(S), precio: NaN, umbral: NaN }));   // NaN se guarda como null
+  assert.equal(guardado.precio, null);
+  for (const e of [{ ...entrada(S), precio: NaN, umbral: NaN }, g.restaurarEntrada(guardado, g.entradaInicial(semanas))]) {
+    const r = g.calcular(semanas, e), t = g.textos(e, r);
+    assert.equal(r.dP, null); assert.equal(t.dP, "—"); assert.equal(t.nuevoPrecio, "");
+    assert.equal(t.formula, "G sin redondear 11,507424 % · ΔP = 11,51 × P × 0,40 / 100");
+    assert.equal(r.umbral, 5); assert.equal(t.veredicto, "Revisión obligatoria: |G| ≥ 5,0 %");
+    assert.equal(r.pct, ORIGINAL["julio por mes (RDL 18)"].pct);   // lo demás, igual
+  }
+  // Un precio de 0 escrito a propósito sigue siendo 0.
+  const cero = { ...entrada(S), precio: 0 }, t0 = g.textos(cero, g.calcular(semanas, cero));
+  assert.equal(t0.dP, "0,00 €");
+});
+
 test("tramos de C: justo en el límite sube al siguiente", () => {
   assert.equal(g.elegirC(g.T18.A, 1.17999), 0.3);
   assert.equal(g.elegirC(g.T18.A, 1.18), 0.4);

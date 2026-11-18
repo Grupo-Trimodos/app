@@ -187,14 +187,3 @@ details.perfil { border-top: 1px solid var(--borde); padding: 12px 0; }
 .organizacion-ficha dt { font-size: .8rem; color: #596474; }
 .organizacion-ficha dd { margin: 4px 0 0; }
 .mi-organizacion > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
-
-/* La jornada se puede consultar sin recargar; controles cómodos en móvil. */
-.reloj-jornada .campo-jornada-tiempo { font-size: clamp(36px, 7vw, 56px); font-weight: 800; line-height: 1.15; margin: 18px 0 8px; font-variant-numeric: tabular-nums; }
-.reloj-jornada .campo-jornada-sub, .reloj-jornada .hint { font-size: 16px; }
-.jornada-semana { border-top: 1px solid var(--borde); padding-top: 16px; margin: 20px 0; font-size: 16px; }
-.jornada-semana strong { margin-left: 8px; font-variant-numeric: tabular-nums; }
-.jornada-semana small { display: block; margin-top: 4px; font-size: 14px; color: var(--suave); }
-.confirmar-jornada { padding: 16px; border: 1px solid var(--borde); background: var(--panel); border-radius: 12px; }
-.confirmar-jornada p { margin-top: 0; font-size: 16px; }
-.confirmar-jornada .btn + .btn { margin-top: 8px; }
-.reloj-jornada .campo-botones { display: grid; gap: 12px; }
