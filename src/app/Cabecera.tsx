@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { AREAS } from "@/lib/permisos";
-import { CONTEXTO, iniciales as inicialesDe } from "@/lib/navegacion";
+import { CONTEXTO, iniciales as inicialesDe, pestanasCampo } from "@/lib/navegacion";
 import { misPendientes } from "@/lib/pendientes";
 import { usuarioActual } from "@/lib/usuario";
 import Icono from "./Icono";
 import Navegacion, { VolverAlInicio } from "./Navegacion";
-import BarraCampo, { type Pestana } from "./BarraCampo";
+import BarraCampo from "./BarraCampo";
+import NavegacionMovil from "./NavegacionMovil";
 import MarcasGrupo from "./MarcasGrupo";
 
 // La PWA de DECA pinta esta misma cabecera en public/deca/app.js (con /api/sesion/cabecera): si cambias el marcado, cámbialo allí.
@@ -32,14 +33,9 @@ export default async function Cabecera({ nombre }: { nombre?: string }) {
 
   // Chóferes y operarios: sin menú lateral. Arriba, el logo y un «Inicio»; abajo, una barra fija con sus pestañas
   // (cada una según sus permisos; «Herramientas», solo con alguna automatización). DECA pinta la de arriba igual
-  // (public/deca/cabecera.js); la barra de abajo es solo de las páginas de la app.
+  // (public/deca/cabecera.js), incluidos los mismos accesos inferiores.
   if (pantalla === "campo") {
-    const pestanas: Pestana[] = [
-      { href: "/", texto: "Inicio", icono: "inicio" },
-      enMenu("ausencias") && { href: "/ausencias", texto: "Vacaciones", icono: "calendario" },
-      enMenu("fichaje") && { href: "/fichaje", texto: "Mis fichajes", icono: "reloj" },
-      enMenu("automatizaciones") && { href: "/automatizaciones", texto: "Herramientas", icono: "herramienta" },
-    ].filter((p): p is Pestana => !!p);
+    const pestanas = pestanasCampo(enMenu);
     return <div className={`app-shell campo ${pestanas.length > 1 ? "con-barra" : ""}`}>
       <a className="shell-skip" href="#contenido-principal">Ir al contenido</a>
       <header className="campo-cabecera">
@@ -72,6 +68,7 @@ export default async function Cabecera({ nombre }: { nombre?: string }) {
         {avisos}{usuario}
       </header>
       <span id="contenido-principal" tabIndex={-1} />
+      <NavegacionMovil areas={areas} inicio={pantalla === "direccion" ? "Cuadro de mando" : "Inicio"} />
     </div>
   );
 }

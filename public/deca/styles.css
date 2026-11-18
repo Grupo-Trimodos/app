@@ -102,6 +102,9 @@ h2 { font-size: 1.12rem; line-height: 1.25; font-weight: 700; margin: 0; text-wr
 /* ---- Cabecera de la app: la hoja es /deca/cabecera.css; aquí, lo que cambia dentro de DECA ---- */
 #cabecera { flex: 0 0 auto; }
 #cabecera a { -webkit-tap-highlight-color: transparent; }
+@media (max-width: 900px) {
+  body.con-navegacion-movil .screen { padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)); }
+}
 .campo-cabecera, .shell-header, .shell-sidebar { font-size: 16px; line-height: 1.55; }   /* la letra de la app, no la de cabina */
 .shell-logout { font: inherit; font-size: 13px; font-weight: 600; }
 /* La raya del color de la empresa, bajo la cabecera, mientras se edita o se revisa su orden. */

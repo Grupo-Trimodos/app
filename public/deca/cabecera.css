@@ -3,6 +3,8 @@
    para tener una dirección fija. El marcado sale de src/app/Cabecera.tsx; DECA lo repite en public/deca/app.js con los
    datos de /api/sesion/cabecera: si cambias uno, cambia el otro. */
 .app-shell { --shell-ancho: 232px; }
+.shell-mobile-nav { display: none; }
+.shell-mobile-panel { display: none; }
 .shell-sidebar { overflow-y: auto; scrollbar-width: thin; scrollbar-color: #d4d7ca transparent; }
 .shell-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 35; width: 232px; background: #fff; color: #20211e; border-right: 1px solid #e0e1d8; border-top: 5px solid var(--marca-amarillo); font-family: var(--marca-fuente); display: flex; flex-direction: column; padding: 27px 16px 22px; }
 .shell-logo { display: flex; align-items: center; justify-content: center; background: white; min-height: 78px; border-radius: 0; padding: 12px 2px 24px; margin: 0 8px 28px; border-bottom: 1px solid #e0e1d8; }
@@ -35,7 +37,7 @@
   .shell-sidebar { position: relative; inset: auto; width: 100%; padding: 15px 18px 0; flex-direction: row; flex-wrap: wrap; align-items: center; }
   .shell-logo { width: 137px; min-height: 43px; padding: 7px 0; margin: 0 0 13px; border-radius: 0; border-bottom: 0; }
   .shell-nav-label { margin: 0 0 13px auto; font-size: 9px; }
-  .shell-nav { width: calc(100% + 36px); flex: 0 0 calc(100% + 36px); margin: 0 -18px; padding: 0 13px 10px; flex-direction: row; overflow-x: auto; scrollbar-width: thin; scrollbar-color: #939a86 transparent; }
+  .shell-nav { display: none; }
   .shell-nav-link { gap: 8px; flex-shrink: 0; font-size: 12px; min-height: 44px; padding: 10px 13px; }
   .shell-nav-link svg { width: 18px; height: 18px; }
   .shell-sidebar-footer { display: none; }
@@ -46,6 +48,33 @@
   .shell-logout { padding-left: 13px; font-size: 12px; }
   .shell-skip { left: 18px; }
 }
+
+/* En móvil los destinos mantienen su sitio al desplazarse. «Más» abre el resto sin una fila interminable. */
+@media (max-width: 900px) {
+  html { scroll-padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px)); }
+  .shell-mobile-nav { position: fixed; inset: auto 0 0; z-index: 36; display: flex; justify-content: center; gap: 3px;
+    padding: 7px max(8px, env(safe-area-inset-right, 0px)) calc(7px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
+    border-top: 1px solid #e0e1d8; background: #fff; box-shadow: 0 -4px 20px #191a1810; font-family: var(--marca-fuente); }
+  .shell-mobile-nav > a, .shell-mobile-nav > button { flex: 1 1 0; min-width: 0; max-width: 150px; min-height: 64px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 6px 3px;
+    border: 0; border-radius: 10px; background: transparent; color: #575c51; font: 700 12px/1.2 var(--marca-fuente);
+    text-decoration: none; text-align: center; cursor: pointer; overflow-wrap: anywhere; }
+  .shell-mobile-nav > .activo { background: #fcda00; color: #191a18; }
+  .shell-mobile-panel:popover-open { display: block; position: fixed; inset: auto 12px calc(92px + env(safe-area-inset-bottom, 0px));
+    width: min(536px, calc(100% - 24px)); max-height: min(65dvh, 580px); margin: 0 auto; overflow-y: auto; overscroll-behavior: contain;
+    padding: 16px; border: 1px solid #e0e1d8; border-radius: 18px; background: #fff; color: #20211e; box-shadow: 0 12px 50px #191a1833;
+    font: 16px/1.45 var(--marca-fuente); }
+  .shell-mobile-panel::backdrop { background: #191a1859; }
+  .shell-mobile-panel > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .shell-mobile-panel h2 { margin: 0; font-size: 20px; }
+  .shell-mobile-panel header button { min-height: 44px; padding: 8px 12px; border: 1px solid #e0e1d8; border-radius: 8px; background: #f6f6f2; color: #20211e; font: inherit; cursor: pointer; }
+  .shell-mobile-panel nav { display: grid; gap: 6px; }
+  .shell-mobile-panel nav a { display: flex; align-items: center; gap: 14px; min-height: 52px; padding: 12px; border-radius: 10px;
+    text-decoration: none; color: #20211e; font-weight: 600; }
+  .shell-mobile-panel nav a:hover { background: #f6f6f2; }
+  .shell-mobile-panel nav a.activo { background: #fff7bf; }
+}
+@media print { .shell-mobile-nav, .shell-mobile-panel { display: none !important; } }
 @media (max-width: 430px) {
   .shell-header { padding: 0 18px; gap: 10px; }
   .shell-heading span { display: none; }

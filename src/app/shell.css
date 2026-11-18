@@ -138,7 +138,7 @@ a.inicio-kpi:hover { border-color: #939a86; box-shadow: 0 7px 21px #20211e09; }
   .login-promesas { gap: 18px; }
 }
 @media (max-width: 900px) {
-  .app-shell ~ .contenido, .app-shell ~ .contenido.estrecho { margin: 0 auto; width: 100%; }
+  .app-shell ~ .contenido, .app-shell ~ .contenido.estrecho { margin: 0 auto; width: 100%; padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)); }
   .app-shell ~ .contenido.estrecho { max-width: 640px; }
   .inicio-bienvenida { flex-direction: row; align-items: center; }
   .inicio-fecha { font-size: 11px; }

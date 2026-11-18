@@ -24,6 +24,24 @@
   const logo = (clase) => nodo("a", { class: clase, href: "/", "aria-label": "Grupo Trimodos, inicio" },
     nodo("img", { src: "/deca/img/trimodos.png", alt: "Grupo Trimodos" }));
 
+  function navegacionMovil(enlaces, ic) {
+    const directos = enlaces.length > 5 ? enlaces.slice(0, 4) : enlaces;
+    const otros = enlaces.length > 5 ? enlaces.slice(4) : [];
+    const enlace = (e, corto) => nodo("a", { href: e.ruta, title: e.nombre,
+      class: e.id === "deca" ? "activo" : null, "aria-current": e.id === "deca" ? "page" : null },
+      icono(e.icono, 24), nodo("span", {}, corto ? e.nombreMovil || e.nombre : e.nombre));
+    const barra = nodo("nav", { class: "shell-mobile-nav", "aria-label": "Secciones" }, directos.map((e) => enlace(e, true)));
+    if (!otros.length) return [barra];
+    barra.append(nodo("button", { type: "button", popovertarget: "secciones-movil", class: otros.some((e) => e.id === "deca") ? "activo" : null },
+      icono(ic.menu || '<path d="M4 6h16M4 12h16M4 18h16"/>', 24), nodo("span", {}, "Más")));
+    const panel = nodo("div", { id: "secciones-movil", popover: "auto", class: "shell-mobile-panel", "aria-labelledby": "secciones-movil-titulo" },
+      nodo("header", {}, nodo("h2", { id: "secciones-movil-titulo" }, "Más secciones"),
+        nodo("button", { type: "button", popovertarget: "secciones-movil", popovertargetaction: "hide" }, "Cerrar")),
+      nodo("nav", { "aria-label": "Más secciones" }, otros.map((e) => enlace(e, false))));
+    panel.addEventListener("click", (e) => { if (e.target.closest("a")) panel.hidePopover(); });
+    return [barra, panel];
+  }
+
   function pintar(d) {
     const hueco = document.getElementById("cabecera");
     if (!hueco) return;
@@ -65,9 +83,14 @@
         nodo("a", { class: "campo-volver", href: "/" }, icono(ic.flecha || '<path d="M4 12h16m-6-6 6 6-6 6"/>', 18), nodo("span", {}, "Inicio")),
         extremos));
     }
+    if (conMenu) partes.push(...navegacionMovil(d.enlaces, ic));
+    const accesos = !conMenu && d ? (d.pestanas || []) : [];
+    if (accesos.length > 1) partes.push(nodo("nav", { class: "shell-mobile-nav shell-mobile-campo", "aria-label": "Secciones" },
+      accesos.map((p) => nodo("a", { href: p.href }, icono(p.icono, 24), nodo("span", {}, p.texto)))));
     partes.push(nodo("span", { id: "contenido-principal", tabindex: "-1" }));
     hueco.replaceChildren(nodo("div", { class: "app-shell" + (conMenu ? "" : " campo") }, partes));
     document.body.dataset.shell = conMenu ? "oficina" : "campo";
+    document.body.classList.toggle("con-navegacion-movil", !!conMenu || accesos.length > 1);
     const salir = document.getElementById("salir");
     if (salir) salir.addEventListener("submit", () => { try { localStorage.removeItem(GUARDADO); } catch { /* sin almacenamiento */ } });
   }
