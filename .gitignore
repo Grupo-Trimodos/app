@@ -1,4 +1,10 @@
-# dependencias y compilados
+# Archivos del sistema
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+
+# Dependencias y compilados
 node_modules/
 .next/
 out/
@@ -9,7 +15,7 @@ next-env.d.ts
 # Python
 .venv/
 __pycache__/
-*.pyc
+*.py[cod]
 .pytest_cache/
 
 # secretos: nunca al repositorio
@@ -17,4 +23,12 @@ __pycache__/
 .env.*
 !.env.example
 
+# Informes y registros locales
+coverage/
+htmlcov/
+.coverage
+.coverage.*
+*.log
+
+# Documentos generados
 *.pdf
