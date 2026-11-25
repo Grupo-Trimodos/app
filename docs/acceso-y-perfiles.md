@@ -200,7 +200,7 @@ por rama del organigrama, empresa o puesto, en vez de solo por centro o equipo.
 
 ## Perfiles y pantallas
 
-- **Cuatro perfiles básicos, que no se borran ni cambian de nombre** (`perfiles.base`, lo impide la base de datos): **Administrador**, **Oficina**, **Chófer** y **Operario**. Cada persona tiene **un puesto en su centro**. Encima se le suman **complementos**: **Responsable**, que aprueba lo de su centro, y **Seguridad**, que vale en todos los centros. Los permisos de cada perfil se siguen editando con casillas.
+- **Perfiles base = los del organigrama** (`perfiles.base`, desde `20261125140000_perfiles_base_organigrama.sql`): los que da algún puesto de Odoo (`puestos_perfil`) más **Responsable**, que se suma solo a quien es gerente de alguna ficha. No se borran ni cambian de nombre ni de pantalla, y no se puede borrar un perfil al que apunte un puesto. En Administración → Perfiles se edita qué ve cada uno. **Oficina** y **Seguridad** quedan como perfiles a mano, fuera del organigrama.
 - **Cada perfil tiene su pantalla** (`perfiles.pantalla`). Si alguien tiene varias, manda la de más alcance. El superadministrador sin perfiles entra en Dirección.
   - **Dirección** (`direccion`): el inicio es el cuadro de mando. No hay fichaje ni flota.
   - **Oficina** (`oficina`): espacio de gestión con menú lateral: su jornada, la flota, DECA y lo que tenga que resolver.

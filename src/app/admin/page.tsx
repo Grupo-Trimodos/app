@@ -67,7 +67,7 @@ function CamposPerfil({ p }: { p?: PerfilRol }) {
     <div className="fila-form">
       <div><label>Nombre</label><input name="nombre" required defaultValue={p?.nombre} readOnly={p?.base} placeholder="Ej.: Jefe de tráfico" /></div>
       <div><label>Descripción</label><input name="descripcion" defaultValue={p?.descripcion ?? ""} /></div>
-      {p?.base ? <div><label>Pantalla</label><p className="hint">{p.pantalla ? NOMBRE_PANTALLA[p.pantalla] : "—"} (fija: es uno de los cuatro básicos)</p></div>
+      {p?.base ? <div><label>Pantalla</label><p className="hint">{p.pantalla ? NOMBRE_PANTALLA[p.pantalla] : "—"} (fija: es un perfil base)</p></div>
         : <div><label>Es un…</label><select name="pantalla" defaultValue={p?.pantalla ?? ""}>
           <option value="">Complemento (se suma a un puesto)</option>
           {(Object.keys(NOMBRE_PANTALLA) as Pantalla[]).map((k) => <option key={k} value={k}>Puesto · {NOMBRE_PANTALLA[k]}</option>)}
@@ -103,7 +103,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Bu
     supabase.from("centros").select("id,nombre").order("nombre").returns<Centro[]>(),
     supabase.from("perfiles").select("id,nombre,descripcion,permisos,todos_los_centros,documentos,pantalla,base").order("nombre").returns<PerfilRol[]>(),
   ]);
-  // Primero los cuatro básicos (en el orden de la empresa) y luego los complementos.
+  // Primero los perfiles base (los del organigrama, por pantalla) y luego los demás.
   const ORDEN: Record<string, number> = { direccion: 0, oficina: 1, campo: 2 };
   const listaPerfiles = (perfiles ?? []).sort((a, b) => Number(b.base) - Number(a.base)
     || (ORDEN[a.pantalla ?? ""] ?? 9) - (ORDEN[b.pantalla ?? ""] ?? 9) || a.nombre.localeCompare(b.nombre));
@@ -284,25 +284,23 @@ async function Personas({ sp, perfiles, centros, esAdmin }: { sp: Busqueda; perf
 /* ---------------------------------------------------------------- perfiles */
 async function Perfiles({ perfiles }: { perfiles: PerfilRol[] }) {
   const { supabase } = await conPermiso("admin.usuarios");
-  const { data } = await supabase.from("usuario_perfil").select("perfil_id").returns<{ perfil_id: number }[]>();
+  const [{ data }, { data: puestos }] = await Promise.all([
+    supabase.from("usuario_perfil").select("perfil_id").returns<{ perfil_id: number }[]>(),
+    supabase.from("puestos_perfil").select("puesto,perfil_id").order("puesto").returns<{ puesto: string; perfil_id: number }[]>(),
+  ]);
   const usos = new Map<number, number>();
   for (const a of data ?? []) usos.set(a.perfil_id, (usos.get(a.perfil_id) ?? 0) + 1);
-  return <section className="panel">
-    <div className="normas">
-      <b>Normas</b>
-      <ul>
-        <li>Hay <b>cuatro perfiles básicos</b>, que no se pueden borrar: <b>Administrador</b> (cuadro de mando de dirección),
-          <b> Oficina</b> (espacio de gestión), <b>Chófer</b> y <b>Operario</b> (una sola pantalla en el móvil).</li>
-        <li>Cada persona tiene <b>un puesto en su centro</b>. Encima se le pueden sumar <b>complementos</b>:
-          <b> Responsable</b> (aprueba vacaciones y ropa y corrige fichajes de <b>su centro</b>) o <b>Seguridad</b> (todos los centros).</li>
-        <li>Nadie aprueba lo suyo. A cada uno le llega lo suyo en la campana de arriba («Pendientes»).</li>
-        <li>Al cambiar un perfil, cambia para todas las personas que lo tienen.</li>
-      </ul>
-    </div>
-    {perfiles.map((p) => <details key={p.id} className="perfil">
-      <summary><b>{p.nombre}</b>{p.base && <span className="etiqueta" style={{ marginLeft: 8 }}>Básico</span>}
-        <span className="hint"> · {p.pantalla ? `Puesto · ${NOMBRE_PANTALLA[p.pantalla].split(":")[0]}` : "Complemento"} · {usos.get(p.id) ?? 0} personas ·
-          {" "}{p.permisos.length} permisos{p.todos_los_centros && " · todos los centros"}</span></summary>
+  const puestosDe = new Map<number, string[]>();
+  for (const p of puestos ?? []) puestosDe.set(p.perfil_id, [...(puestosDe.get(p.perfil_id) ?? []), p.puesto]);
+  const base = perfiles.filter((p) => p.base);
+  const otros = perfiles.filter((p) => !p.base);
+  const Perfil = ({ p }: { p: PerfilRol }) => <details className="perfil">
+      <summary><b>{p.nombre}</b>{p.base && <span className="etiqueta" style={{ marginLeft: 8 }}>Base</span>}
+        <span className="hint"> · {p.pantalla ? `Pantalla de ${NOMBRE_PANTALLA[p.pantalla].split(":")[0].toLowerCase()}` : "Se suma a otro perfil"} · {usos.get(p.id) ?? 0} personas ·
+          {" "}{p.permisos.length} permisos{p.todos_los_centros && " · todos los centros"}</span>
+        <span className="hint" style={{ display: "block" }}>{p.nombre === "Responsable"
+          ? "Lo da Odoo: a quien es gerente de alguna ficha."
+          : puestosDe.get(p.id)?.length ? `Lo da Odoo a los puestos: ${puestosDe.get(p.id)!.join(", ")}.` : "Ningún puesto de Odoo lo da: solo se asigna a mano."}</span></summary>
       <form action={guardarPerfil}>
         <input type="hidden" name="id" value={p.id} />
         <CamposPerfil p={p} />
@@ -313,7 +311,25 @@ async function Perfiles({ perfiles }: { perfiles: PerfilRol[] }) {
         <label><input type="checkbox" name="confirmar" /> Sí, quiero borrarlo ({usos.get(p.id) ?? 0} personas lo perderán)</label>
         <button className="btn pequeno">Borrar perfil</button>
       </form>}
-    </details>)}
+    </details>;
+  return <section className="panel">
+    <div className="normas">
+      <b>Cómo funciona</b>
+      <ul>
+        <li>Los <b>perfiles base</b> son los del organigrama: el <b>puesto de la ficha de Odoo</b> decide cuál tiene cada persona
+          (se empareja en <Link href="/admin/organigrama?ver=puestos">Perfiles por organigrama → Puesto → perfil</Link>).
+          <b> Responsable</b> se suma solo a quien es gerente de alguna ficha y vale para toda la gente que cuelga de él.</li>
+        <li>Aquí decides <b>qué ve y qué hace cada perfil base</b>. Al guardar, cambia para todas las personas que lo tienen.</li>
+        <li>Los perfiles base no se borran ni cambian de nombre ni de pantalla.</li>
+        <li>Nadie aprueba lo suyo. A cada uno le llega lo suyo en la campana de arriba («Pendientes»).</li>
+      </ul>
+    </div>
+    <h2>Perfiles base</h2>
+    {base.map((p) => <Perfil key={p.id} p={p} />)}
+    <h2 style={{ marginTop: 24 }}>Otros perfiles</h2>
+    <p className="hint">No los da ningún puesto de Odoo: solo se asignan a mano en Personas. Mejor no usarlos para lo que ya cubre
+      el organigrama; si nadie los tiene, se pueden borrar.</p>
+    {otros.map((p) => <Perfil key={p.id} p={p} />)}
     <details className="perfil">
       <summary><b>+ Nuevo perfil</b></summary>
       <form action={crearPerfil}><CamposPerfil /><button className="btn primario" style={{ marginTop: 14 }}>Crear perfil</button></form>

@@ -10,7 +10,7 @@ no implica que esté habilitada en el piloto: el acceso depende de los permisos 
 | Documento | De qué trata |
 |---|---|
 | [configuracion-inicial.md](configuracion-inicial.md) | Supabase, login con Microsoft, Google y código + PIN, primer administrador y Vercel (una sola vez) |
-| [acceso-y-perfiles.md](acceso-y-perfiles.md) | Sesión, permisos, los cuatro perfiles básicos, pantallas y administración |
+| [acceso-y-perfiles.md](acceso-y-perfiles.md) | Sesión, permisos, los perfiles base, pantallas y administración |
 | [identidad-visual.md](identidad-visual.md) | Logos, colores y tipografía compartidos por la app y DECA |
 | [scripts.md](scripts.md) | Para qué sirve cada script |
 | [nueva-funcion.md](nueva-funcion.md) | Cómo se añade una función (fuera del piloto) |

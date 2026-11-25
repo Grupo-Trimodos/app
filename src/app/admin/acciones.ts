@@ -178,7 +178,7 @@ function leerPerfil(form: FormData) {
     todos_los_centros: form.get("todos_los_centros") === "on",
     documentos: [...new Set(form.getAll("documentos").map(String).filter((d) => d in DOCUMENTOS_PERSONA))],
   };
-  // La pantalla solo se cambia en los perfiles que no son de los cuatro básicos (en esos, el campo no se envía).
+  // La pantalla solo se cambia en los perfiles que no son de los perfiles base (en esos, el campo no se envía).
   if (form.has("pantalla")) datos.pantalla = PANTALLAS.includes(pantalla) ? pantalla : null;
   // Los documentos requeridos no conceden acceso: los permisos se eligen explícitamente.
   return datos;
@@ -208,7 +208,8 @@ export async function borrarPerfil(form: FormData) {
   const { supabase } = await exigir("admin.usuarios");
   if (form.get("confirmar") !== "on") return volver("Marca la casilla para confirmar que quieres borrar el perfil.", "error");
   const { error } = await supabase.from("perfiles").delete().eq("id", Number(form.get("id")));
-  if (error) return volver(error.message.includes("cuatro básicos") ? "Ese perfil es uno de los cuatro básicos y no se puede borrar."
+  if (error) return volver(error.message.includes("perfil base") ? "Ese perfil es un perfil base y no se puede borrar."
+    : error.message.includes("algún puesto") ? "Ese perfil lo da algún puesto de Odoo: cámbialo antes en Perfiles por organigrama → Puesto → perfil."
     : "No se ha podido borrar el perfil.", "error");
   revalidatePath("/admin");
   return volver("Perfil borrado. Las personas que lo tenían lo han perdido.");
