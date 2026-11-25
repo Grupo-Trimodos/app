@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   title: "Grupo Trimodos",
   description: "App interna de Grupo Trimodos",
   robots: { index: false, follow: false },
-  icons: { icon: "/deca/favicon.png", apple: "/deca/icons/apple-touch-icon.png" },
+  icons: { icon: "/deca/favicon.png?v=2", apple: "/deca/icons/apple-touch-icon.png?v=2" },   // ?v: que los móviles cojan el logo nuevo
 };
 
 export const viewport: Viewport = { themeColor: "#fcda00", colorScheme: "light" };

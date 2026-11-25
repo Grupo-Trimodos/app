@@ -1,6 +1,6 @@
 // Service worker: solo guarda la "carcasa" de la app para que abra aunque no haya cobertura.
 // Solo atiende /deca/: los datos (/api/*) y el resto de la app general NUNCA se guardan en caché.
-const CACHE = "deca-v26"; // súbelo (v2, v3…) cuando cambies archivos de la carcasa
+const CACHE = "deca-v27"; // súbelo (v2, v3…) cuando cambies archivos de la carcasa
 const SHELL = [
   "/deca/marca.css", "/deca/fonts/mulish-variable.ttf",
   "/deca/", "/deca/index.html", "/deca/guia.html", "/deca/cabecera.css", "/deca/styles.css", "/deca/cabecera.js", "/deca/cinematica.js", "/deca/cinematica.css", "/deca/app.js", "/deca/manifest.webmanifest",
