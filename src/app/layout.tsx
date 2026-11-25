@@ -9,6 +9,8 @@ import "../../public/deca/cinematica.css";   // cinemática de entrada (la misma
 
 export const metadata: Metadata = {
   title: "Grupo Trimodos",
+  applicationName: "Muelle",
+  appleWebApp: { title: "Muelle" },   // nombre bajo el icono al añadirla a la pantalla de inicio
   description: "App interna de Grupo Trimodos",
   robots: { index: false, follow: false },
   icons: { icon: "/deca/favicon.png?v=2", apple: "/deca/icons/apple-touch-icon.png?v=2" },   // ?v: que los móviles cojan el logo nuevo
