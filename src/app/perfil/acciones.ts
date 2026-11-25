@@ -23,3 +23,17 @@ export async function guardarMiTelefono(form: FormData) {
   revalidatePath("/perfil");
   return volver(form, "Móvil guardado. Tu responsable lo usará para comprobar tu ficha de empleado.");
 }
+
+/** La persona elige el color de su logo (solo el suyo: public.guardar_mi_color_logo, migración 20261125150000). */
+export async function guardarMiColorLogo(form: FormData) {
+  const { supabase, perfil } = await usuarioActual();
+  if (!perfil?.activo) redirect("/");
+  const color = String(form.get("color") ?? "").trim();
+  if (!/^#[0-9A-Fa-f]{6}$/.test(color)) return volver(form, "Elige un color de la lista o uno propio.", "error");
+  const { error } = await supabase.rpc("guardar_mi_color_logo", { color });
+  if (error) {
+    return volver(form, ["22023", "42501"].includes(error.code) ? error.message : "No se ha podido guardar el color. Inténtalo de nuevo.", "error");
+  }
+  revalidatePath("/", "layout");
+  return volver(form, "Color del logo guardado.");
+}

@@ -102,3 +102,10 @@
   .campo-cabecera .shell-user { gap: 5px; }
   .campo-cabecera .shell-logout { padding-left: 8px; margin-left: 0; }
 }
+
+/* Logo personalizable (color de «Mi perfil»): lo usan la web y DECA */
+.logo-personal { gap: 10px; text-decoration: none; }
+.logo-personal svg { flex-shrink: 0; }
+.logo-personal-texto { display: flex; flex-direction: column; color: #20211e; font-size: 17px; font-weight: 700; letter-spacing: .08em; line-height: 1.05; }
+.logo-personal-texto small { font-size: 10px; font-weight: 600; letter-spacing: .2em; color: #62665c; }
+.campo-logo svg { display: block; }

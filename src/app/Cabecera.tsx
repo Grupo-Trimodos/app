@@ -8,6 +8,8 @@ import Navegacion, { VolverAlInicio } from "./Navegacion";
 import BarraCampo from "./BarraCampo";
 import NavegacionMovil from "./NavegacionMovil";
 import MarcasGrupo from "./MarcasGrupo";
+import { LogoTrimodos, FaviconLogo, COLORES_CORPORATIVOS } from "./LogoTrimodos";
+import Cinematica, { TAPA_CINEMATICA } from "./Cinematica";
 
 // La PWA de DECA pinta esta misma cabecera en public/deca/app.js (con /api/sesion/cabecera): si cambias el marcado, cámbialo allí.
 export default async function Cabecera({ nombre }: { nombre?: string }) {
@@ -17,8 +19,13 @@ export default async function Cabecera({ nombre }: { nombre?: string }) {
       <span>El espacio de nuestro equipo</span>
     </header>;
   }
-  const [{ enMenu, pantalla }, { total }] = await Promise.all([usuarioActual(), misPendientes()]);
+  const [{ enMenu, pantalla, supabase, uid }, { total }] = await Promise.all([usuarioActual(), misPendientes()]);
+  // Color del logo que ha elegido en «Mi perfil» (public.preferencias_usuario); sin elegir, el amarillo del grupo.
+  const { data: pref } = await supabase.from("preferencias_usuario").select("color_logo").eq("usuario_id", uid)
+    .maybeSingle<{ color_logo: string | null }>();
+  const colorLogo = pref?.color_logo || COLORES_CORPORATIVOS.trimodos;
   const iniciales = inicialesDe(nombre);
+  const entrada = <><script dangerouslySetInnerHTML={{ __html: TAPA_CINEMATICA }} /><Cinematica /></>;
   const avisos = <Link className={`shell-avisos ${total ? "con-avisos" : ""}`} href="/pendientes"
     aria-label={total ? `Pendientes: ${total}` : "Pendientes: nada"} title="Lo que tienes pendiente y tus novedades">
     <Icono nombre="campana" size={21} />{total > 0 && <span className="shell-avisos-cuenta">{total > 99 ? "99+" : total}</span>}
@@ -37,9 +44,11 @@ export default async function Cabecera({ nombre }: { nombre?: string }) {
   if (pantalla === "campo") {
     const pestanas = pestanasCampo(enMenu);
     return <div className={`app-shell campo ${pestanas.length > 1 ? "con-barra" : ""}`}>
+      {entrada}
       <a className="shell-skip" href="#contenido-principal">Ir al contenido</a>
       <header className="campo-cabecera">
-        <Link className="campo-logo" href="/" aria-label="Grupo Trimodos, inicio"><img src="/deca/img/trimodos.png" alt="Grupo Trimodos" /></Link>
+        <Link className="campo-logo" href="/" aria-label="Grupo Trimodos, inicio"><LogoTrimodos color={colorLogo} size={40} /></Link>
+        <FaviconLogo color={colorLogo} />
         <VolverAlInicio />
         {avisos}{usuario}
       </header>
@@ -51,11 +60,14 @@ export default async function Cabecera({ nombre }: { nombre?: string }) {
   const areas = AREAS.filter((a) => enMenu(a.id)).map(({ id, nombre, ruta }) => ({ id, nombre, ruta }));
   return (
     <div className="app-shell">
+      {entrada}
       <a className="shell-skip" href="#contenido-principal">Ir al contenido</a>
       <aside className="shell-sidebar">
-        <Link className="shell-logo" href="/" aria-label="Grupo Trimodos, inicio">
-          <img src="/deca/img/trimodos.png" alt="Grupo Trimodos" />
+        <Link className="shell-logo logo-personal" href="/" aria-label="Grupo Trimodos, inicio">
+          <LogoTrimodos color={colorLogo} size={44} />
+          <span className="logo-personal-texto"><small>GRUPO</small>TRIMODOS</span>
         </Link>
+        <FaviconLogo color={colorLogo} />
         <p className="shell-nav-label">{pantalla === "direccion" ? "DIRECCIÓN" : "ESPACIO DE TRABAJO"}</p>
         <Navegacion areas={areas} inicio={pantalla === "direccion" ? "Cuadro de mando" : "Inicio"} />
         <div className="shell-sidebar-footer"><span className="shell-brand-line" />

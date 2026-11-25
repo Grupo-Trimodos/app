@@ -41,7 +41,11 @@ export async function GET() {
   const { data } = await supabase.auth.getClaims();
   if (!data?.claims?.sub) return NextResponse.json({ error: "Tienes que iniciar sesión." }, { status: 401, ...sinCache });
 
-  const [{ perfil, enMenu, pantalla }, { total }] = await Promise.all([usuarioActual(), misPendientes()]);
+  const [{ perfil, enMenu, pantalla, uid }, { total }] = await Promise.all([usuarioActual(), misPendientes()]);
+  // Color del logo elegido en «Mi perfil» (public.preferencias_usuario); la PWA dibuja el mismo logo que la web.
+  const { data: pref } = await supabase.from("preferencias_usuario").select("color_logo").eq("usuario_id", uid)
+    .maybeSingle<{ color_logo: string | null }>();
+  const colorLogo = /^#[0-9a-fA-F]{6}$/.test(pref?.color_logo ?? "") ? pref!.color_logo : null;
   const nombre = perfil?.nombre || perfil?.codigo || "";
   const areas = pantalla === "campo" ? [] : AREAS.filter((a) => enMenu(a.id)).map(({ id, nombre, ruta }) => ({ id, nombre, ruta }));
   const enlaces = pantalla === "campo" ? []
@@ -50,5 +54,6 @@ export async function GET() {
     nombre, iniciales: iniciales(nombre), pantalla: pantalla ?? "oficina", contexto: CONTEXTO[pantalla ?? "oficina"],
     pestanas: pantalla === "campo" ? pestanas(enMenu) : [],
     etiqueta: pantalla === "direccion" ? "DIRECCIÓN" : "ESPACIO DE TRABAJO", enlaces, pendientes: total, iconos: fijos(),
+    colorLogo,
   }, sinCache);
 }
