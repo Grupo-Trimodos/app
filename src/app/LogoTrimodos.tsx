@@ -2,13 +2,9 @@
 // Logo "puerta de contenedor" personalizable por usuario.
 // Uso: <LogoTrimodos color={perfil.colorLogo} size={40} />
 import { useEffect, useId, useState } from "react";
+import { COLORES_CORPORATIVOS, colorLogoValido } from "@/lib/colores-logo";
 
-export const COLORES_CORPORATIVOS = {
-  trimodos: "#FDDA00",
-  stinsa: "#009F92",
-  transargi: "#F27C49",
-  noche: "#2A2B28",
-};
+export { COLORES_CORPORATIVOS } from "@/lib/colores-logo";
 
 // --- utilidades de color ---
 const hexToRgb = (h: string) => {
@@ -30,7 +26,8 @@ const luminancia = (h: string) => {
 };
 
 // Calcula marco, estrías y marca de agua a partir de un único color
-export function paleta(color: string) {
+export function paleta(entrada: string) {
+  const color = colorLogoValido(entrada);
   const claro = luminancia(color) > 0.35;
   return {
     puerta: color,
@@ -112,7 +109,7 @@ export function useFaviconLogo(color?: string) {
 
 // Selector para «Mi perfil»: va dentro de un <form> con la acción del servidor; envía el campo «color».
 export function SelectorColorLogo({ inicial }: { inicial: string }) {
-  const [valor, setValor] = useState(inicial);
+  const [valor, setValor] = useState(colorLogoValido(inicial));
   return (
     <div className="selector-logo">
       <LogoTrimodos color={valor} size={72} />

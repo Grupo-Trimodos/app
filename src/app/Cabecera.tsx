@@ -8,8 +8,10 @@ import Navegacion, { VolverAlInicio } from "./Navegacion";
 import BarraCampo from "./BarraCampo";
 import NavegacionMovil from "./NavegacionMovil";
 import MarcasGrupo from "./MarcasGrupo";
-import { LogoTrimodos, FaviconLogo, COLORES_CORPORATIVOS } from "./LogoTrimodos";
-import Cinematica, { TAPA_CINEMATICA } from "./Cinematica";
+import { LogoTrimodos, FaviconLogo } from "./LogoTrimodos";
+import { colorLogoValido } from "@/lib/colores-logo";
+import Cinematica from "./Cinematica";
+import { TAPA_CINEMATICA } from "@/lib/cinematica";
 
 // La PWA de DECA pinta esta misma cabecera en public/deca/app.js (con /api/sesion/cabecera): si cambias el marcado, cámbialo allí.
 export default async function Cabecera({ nombre }: { nombre?: string }) {
@@ -23,7 +25,7 @@ export default async function Cabecera({ nombre }: { nombre?: string }) {
   // Color del logo que ha elegido en «Mi perfil» (public.preferencias_usuario); sin elegir, el amarillo del grupo.
   const { data: pref } = await supabase.from("preferencias_usuario").select("color_logo").eq("usuario_id", uid)
     .maybeSingle<{ color_logo: string | null }>();
-  const colorLogo = pref?.color_logo || COLORES_CORPORATIVOS.trimodos;
+  const colorLogo = colorLogoValido(pref?.color_logo);
   const iniciales = inicialesDe(nombre);
   const entrada = <><script dangerouslySetInnerHTML={{ __html: TAPA_CINEMATICA }} /><Cinematica /></>;
   const avisos = <Link className={`shell-avisos ${total ? "con-avisos" : ""}`} href="/pendientes"

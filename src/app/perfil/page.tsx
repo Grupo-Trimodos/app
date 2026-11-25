@@ -5,7 +5,8 @@ import PedirTelefono from "../PedirTelefono";
 import { conPermiso } from "@/lib/usuario";
 import { TODOS_LOS_PERMISOS } from "@/lib/permisos";
 import { guardarMiColorLogo } from "./acciones";
-import { SelectorColorLogo, COLORES_CORPORATIVOS } from "../LogoTrimodos";
+import { SelectorColorLogo } from "../LogoTrimodos";
+import { colorLogoValido } from "@/lib/colores-logo";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mi perfil · Grupo Trimodos" };
 export default async function MiPerfil({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
@@ -24,7 +25,7 @@ export default async function MiPerfil({ searchParams }: { searchParams: Promise
       <p className="hint">Elige el color del logo que ves en la app. Solo cambia para ti.</p>
       <form action={guardarMiColorLogo}>
         <input type="hidden" name="volver" value="/perfil" />
-        <SelectorColorLogo inicial={pref?.color_logo || COLORES_CORPORATIVOS.trimodos} />
+        <SelectorColorLogo inicial={colorLogoValido(pref?.color_logo)} />
         <button className="btn primario" type="submit">Guardar color</button>
       </form>
     </section>

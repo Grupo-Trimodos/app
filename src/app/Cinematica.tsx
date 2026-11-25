@@ -1,10 +1,6 @@
 "use client";
 import { useEffect } from "react";
 
-/** Script en línea que se ejecuta antes de pintar: si toca la cinemática, tapa la app un instante (public/deca/cinematica.css). */
-export const TAPA_CINEMATICA =
-  'try{if(!sessionStorage.getItem("trimodos-cinematica-vista")&&localStorage.getItem("trimodos-bienvenida"))document.documentElement.classList.add("cine-pendiente")}catch(e){}';
-
 /** Carga la cinemática de entrada (public/deca/cinematica.js, la misma que DECA). Ella decide si toca: no la primera vez,
  *  sí al volver a abrir la app con la sesión recordada, una vez por sesión del navegador. */
 export default function Cinematica() {
