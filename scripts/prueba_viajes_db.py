@@ -19,7 +19,8 @@ import subprocess
 import uuid
 
 RAIZ = Path(__file__).resolve().parents[1]
-NO_EN_PRODUCCION = {'20261116000000_grupos_de_trabajo.sql', '20261117000000_ediciones_empleados.sql'}
+# Desde el 25-11-2026 se aplican en producción todas las migraciones del repo (con el piloto ocultando lo nuevo).
+NO_EN_PRODUCCION: set[str] = set()
 
 
 def uid(n):
@@ -87,6 +88,11 @@ def main():
             sql(p.read_text())
             aplicadas += 1
         print(f'OK: {aplicadas} migraciones aplicadas' + (' (como en producción)' if args.como_produccion else ''), flush=True)
+        # El piloto (20261125130000) oculta esta función quitando sus permisos de los perfiles. Se comprueba y se vuelven
+        # a dar como haría Administración → Perfiles al activarla, para probar su seguridad.
+        assert sql("select count(*) from public.perfiles where permisos && '{viajes.usar,viajes.seguimiento}'::text[];").stdout.strip() == '0', 'el piloto la oculta'
+        sql("""update public.perfiles p set permisos = array(select distinct x from unnest(p.permisos || v.dar::text[]) x order by x)
+               from (values ('Chófer','{viajes.usar}'),('Responsable','{viajes.seguimiento}'),('Administrador','{viajes.seguimiento}')) as v(nombre, dar) where p.nombre = v.nombre;""")
         sql("""
         insert into auth.users(id,email) select ('00000000-0000-0000-0000-' || lpad(n::text,12,'0'))::uuid, 'prueba' || n || '@example.invalid' from generate_series(1,9) n;
         update public.usuarios set activo=true;

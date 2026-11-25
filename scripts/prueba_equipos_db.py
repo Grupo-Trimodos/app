@@ -67,6 +67,11 @@ def main():
         """)
         for p in sorted((RAIZ / 'supabase/migrations').glob('*.sql')):
             sql(p.read_text())
+        # El piloto (20261125130000) oculta esta función quitando sus permisos de los perfiles. Se comprueba y se vuelven
+        # a dar como haría Administración → Perfiles al activarla, para probar su seguridad.
+        assert sql("select count(*) from public.perfiles where permisos && '{equipos.ver,equipos.crear}'::text[];").stdout.strip() == '0', 'el piloto la oculta'
+        sql("""update public.perfiles p set permisos = array(select distinct x from unnest(p.permisos || v.dar::text[]) x order by x)
+               from (values ('Responsable','{equipos.crear,equipos.ver}'),('Administrador','{equipos.crear,equipos.ver}'),('Chófer','{equipos.ver}'),('Operario','{equipos.ver}'),('Oficina','{equipos.ver}')) as v(nombre, dar) where p.nombre = v.nombre;""")
         sql("""
         insert into auth.users(id,email) select ('00000000-0000-0000-0000-' || lpad(n::text,12,'0'))::uuid, 'prueba' || n || '@example.invalid' from generate_series(1,9) n;
         update public.usuarios set activo=true;

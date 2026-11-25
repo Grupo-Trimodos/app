@@ -16,6 +16,8 @@ export const metadata = { title: "Mi equipo · Grupo Trimodos" };
 
 const NADIE = "00000000-0000-0000-0000-000000000000";
 const SIN_CENTRO = 0;   // pestaña del administrador con quien aún no tiene centro
+const ODOO = -1;        // pestaña «Mi gente»: quien cuelga de mí en el organigrama de Odoo (o mi empresa, en Administración)
+type Gente = { usuario_id: string; nombre: string; codigo: string | null; puesto: string | null; departamento: string | null; directo: boolean };
 type Fila = { usuario_id: string; perfiles: { nombre: string }; usuarios: { nombre: string; codigo: string | null; activo: boolean } };
 type Miembro = { usuario_id: string; perfiles: string[]; usuarios: Fila["usuarios"] };
 type Ausencia = { id: number; usuario_id: string; tipo: string; desde: string; hasta: string; motivo: string | null; estado: string;
@@ -26,22 +28,29 @@ export default async function PaginaEquipo({ searchParams }: { searchParams: Pro
   const { centros: conCentro, todos } = await alcanceCentros(supabase, uid, perfil.es_admin, permisosDe("equipo"));
   // Quien lleva todos los centros (superadministrador o un perfil «todos los centros», como Administrador) ve también a
   // quien todavía no tiene centro: si no, nadie vería ni corregiría sus fichajes.
-  const centros = todos ? [...conCentro, { id: SIN_CENTRO, nombre: "Sin centro" }] : conCentro;
+  // Mi gente según Odoo (perfiles por organigrama). Sin la migración, la lista llega vacía y todo sigue como antes.
+  const { data: genteOdoo } = await supabase.rpc("mi_gente_odoo");
+  const gente = (genteOdoo ?? []) as Gente[];
+  const centros = [...(gente.length ? [{ id: ODOO, nombre: "Mi gente" }] : []), ...conCentro,
+    ...(todos ? [{ id: SIN_CENTRO, nombre: "Sin centro" }] : [])];
   const verEquipo = puede("equipo.ver"), aprobar = puede("ausencias.aprobar"), corregir = puede("fichaje.corregir");
   const { ok, error, centro } = await searchParams;
   if (centros.length === 0) {
     return <>
       <Cabecera nombre={perfil.nombre || perfil.email || ""} />
       <main className="contenido estrecho"><h1>Mi equipo</h1>
-        <section className="panel"><p>Tienes el perfil de responsable, pero <b>sin ningún centro asignado</b>, así que todavía no
-          tienes a nadie a tu cargo. Pide a la administración que te asigne el perfil en tu centro.</p></section></main>
+        <section className="panel"><p>Tienes el perfil de responsable, pero <b>todavía no tienes a nadie a tu cargo</b>: en Odoo nadie
+          te tiene como gerente y no tienes ningún centro asignado. Si es un error, pide que lo corrijan en Odoo.</p></section></main>
     </>;
   }
   const elegido = centros.find((c) => String(c.id) === centro) ?? centros[0];
 
-  // Personas con algún perfil en este centro (una persona puede tener varios perfiles).
+  // Personas con algún perfil en este centro (una persona puede tener varios perfiles), o mi gente de Odoo.
   const filtro = supabase.from("usuario_perfil").select("usuario_id,perfiles(nombre),usuarios(nombre,codigo,activo)");
-  const { data: m } = await (elegido.id === SIN_CENTRO ? filtro.is("centro_id", null) : filtro.eq("centro_id", elegido.id));
+  const { data: m } = elegido.id === ODOO
+    ? { data: gente.map((g) => ({ usuario_id: g.usuario_id, perfiles: { nombre: [g.puesto ?? "Sin puesto", g.directo ? "directo" : ""].filter(Boolean).join(" · ") },
+        usuarios: { nombre: g.nombre, codigo: g.codigo, activo: true } })) }
+    : await (elegido.id === SIN_CENTRO ? filtro.is("centro_id", null) : filtro.eq("centro_id", elegido.id));
   const porPersona = new Map<string, Miembro>();
   for (const x of (m ?? []) as unknown as Fila[]) {
     if (!x.usuarios?.activo) continue;
@@ -106,7 +115,8 @@ export default async function PaginaEquipo({ searchParams }: { searchParams: Pro
           {puede("personas.vincular") && <Link className="btn pequeno" href="/equipo/odoo">Enlazar con Odoo</Link>}
           {puede("zonas.gestionar") && <Link className="btn pequeno" href="/equipo/zonas">Chóferes por cliente o ruta</Link>}</div>
         <OrigenDato fuente="App · Personas de tu equipo">
-          <p>Personas con acceso a la app dentro de tu alcance por centro y departamento. Los fichajes, solicitudes y camiones confirmados proceden de la app.</p>
+          <p>Personas con acceso a la app dentro de tu alcance: «Mi gente» es quien cuelga de ti en el organigrama de Odoo (o tu empresa, si llevas
+            su administración); el resto, por centro y departamento. Los fichajes, solicitudes y camiones confirmados proceden de la app.</p>
         </OrigenDato>
         {centros.length > 1 && (
           <nav className="chips" style={{ margin: "8px 0 16px" }} aria-label="Centro">

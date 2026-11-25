@@ -649,6 +649,32 @@ class OdooClient:
             ("empresa", "company_id"), ("area", "department_id"), ("ubicacion", "work_location_id"),
             ("puesto", "job_id"), ("responsable", "parent_id"))}
 
+    def organigrama(self, empresas: list[int]) -> list[dict]:
+        """Organigrama para los perfiles y el alcance (solo lectura): una fila por ficha activa de esas empresas, con su
+        empresa, departamento (nombre completo), puesto, gerente y ubicación. Nunca datos personales ni de nómina."""
+        dominio = [["active", "=", True], ["company_id", "in", [int(e) for e in empresas]]]
+        empleados = self._call("hr.employee", "search_read", [dominio], {
+            "fields": ["name", "company_id", "department_id", "job_id", "parent_id", "work_location_id"],
+            "order": "id", "limit": 5001})
+        if len(empleados) > 5000:
+            raise AppError("El organigrama supera el límite de consulta. Avisa a administración para ampliarlo.", 503, "organigrama_incompleto")
+        ids_dep = sorted({_m2o(e.get("department_id"))[0] for e in empleados if e.get("department_id")})
+        completos = {d["id"]: d.get("complete_name") or d.get("name") or "" for d in self._call(
+            "hr.department", "read", [ids_dep], {"fields": ["name", "complete_name"]})} if ids_dep else {}
+        filas = []
+        for e in empleados:
+            empresa = _m2o(e.get("company_id"))
+            dep = _m2o(e.get("department_id"))
+            puesto = _m2o(e.get("job_id"))
+            ubic = _m2o(e.get("work_location_id"))
+            filas.append({"empleado_id": e["id"], "nombre": (e.get("name") or "").strip() or f"Ficha {e['id']}",
+                          "empresa_id": empresa[0], "empresa": empresa[1] if empresa[0] else None,
+                          "departamento_id": dep[0], "departamento": completos.get(dep[0], dep[1]) if dep[0] else None,
+                          "puesto_id": puesto[0], "puesto": puesto[1] if puesto[0] else None,
+                          "gerente_id": _m2o(e.get("parent_id"))[0],
+                          "ubicacion_id": ubic[0], "ubicacion": ubic[1] if ubic[0] else None})
+        return filas
+
     def catalogo_transporte(self, buscar: str = "", incluir_externos: bool = False) -> dict:
         """Catálogo global de las empresas configuradas; solo datos operativos, sin copias."""
         dominio = [["active", "=", True], "|", ["company_id", "=", False],

@@ -44,7 +44,8 @@ cambiar una función.
 6. **Fase actual: piloto de fichaje y vacaciones.** No añadir funciones nuevas; solo limpiar, arreglar y pulir. Lo demás
    queda oculto quitando el permiso en los perfiles, no borrando código.
    Excepción autorizada por Félix el 16-11-2026: la organización por grupos de trabajo (centros, zonas, departamentos y
-   tipos de transporte; `docs/acceso-y-perfiles.md`).
+   tipos de transporte; `docs/acceso-y-perfiles.md`). Ampliada por Félix el 25-11-2026: perfiles y alcance según el
+   organigrama de Odoo (puesto → perfil, gerente → responsable en cascada; `docs/acceso-y-perfiles.md`).
 
 ## Stack
 - Web: Next.js 16 (App Router, `src/`), TypeScript, CSS propio (`src/app/globals.css`, `src/app/shell.css`). Next 16 usa

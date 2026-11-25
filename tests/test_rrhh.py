@@ -399,7 +399,7 @@ def test_sincronizacion_se_salta_lo_que_no_tiene_su_aplicacion_en_odoo(entorno, 
     assert r["fichajes"]["estado"] == "ok"
     estado = c.get("/api/odoo/estado", headers={"Authorization": "Bearer tok-jefa"}).json()
     assert {m["id"]: m["instalada"] for m in estado["mapas"]} == {
-        "empleados": True, "fichajes": True, "ausencias": False, "vehiculos": False, "fichas_empleados": True}
+        "empleados": True, "fichajes": True, "ausencias": False, "vehiculos": False, "fichas_empleados": True, "organigrama": True}
 
 
 def test_con_odoo_simulado_no_se_guardan_empleados_ni_camiones_de_prueba(entorno, monkeypatch):
