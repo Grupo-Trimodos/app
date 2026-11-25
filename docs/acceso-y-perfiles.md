@@ -187,6 +187,12 @@ da desde Administración → Perfiles, como siempre.
 - **Vista previa y «ver la app como…»** en la pantalla: para cada ficha, los perfiles que le daría Odoo frente a los que
   tiene, su pantalla, su menú y la gente a su cargo.
 
+**Paso a producción (25-11-2026, decisión de Félix):** se aplican a la vez las migraciones del 16 y 17-11 que faltaban en
+producción y esta. Para seguir en el piloto, `20261125130000_piloto_ocultar_funciones_nuevas.sql` quita de los perfiles
+los permisos de Equipos, Calendario y Mis viajes (se vuelven a dar desde Administración → Perfiles). Se mantiene
+«Enlazar con Odoo» (`personas.vincular`): sin el enlace persona ↔ ficha, el organigrama no puede dar perfiles. Las
+pruebas de base de datos de esas funciones comprueban que quedan ocultas y vuelven a dar sus permisos para probarlas.
+
 **Pendiente (siguiente paso):** el «para quién» de lo que se publica (fechas del calendario, automatizaciones, avisos)
 por rama del organigrama, empresa o puesto, en vez de solo por centro o equipo.
 

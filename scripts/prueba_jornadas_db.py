@@ -13,7 +13,8 @@ import uuid
 
 RAIZ = Path(__file__).resolve().parents[1]
 NUEVA = '20261110000000_jornadas_pendientes.sql'
-NO_EN_PRODUCCION = {'20261116000000_grupos_de_trabajo.sql', '20261117000000_ediciones_empleados.sql'}
+# Desde el 25-11-2026 se aplican en producción todas las migraciones del repo (con el piloto ocultando lo nuevo).
+NO_EN_PRODUCCION: set[str] = set()
 
 
 def main():
