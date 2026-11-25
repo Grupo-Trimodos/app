@@ -1,0 +1,81 @@
+/* Cinemática de entrada (public/deca/cinematica.js). La usan la web y DECA. Solo sale al abrir la app con la sesión ya
+   recordada, nunca la primera vez. */
+@font-face {
+  font-family: "Saira Stencil One";
+  src: url("/deca/fonts/saira-stencil-one-latin-400.woff2") format("woff2");
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+
+/* Tapa: mientras carga la página, que no se vea la app un instante antes de la puerta (la pone un script en línea) */
+html.cine-pendiente body::after { content: ""; position: fixed; inset: 0; z-index: 9999; background: #121312; animation: cine-tapa 0s 4s forwards; }
+@keyframes cine-tapa { to { visibility: hidden; } }
+
+.cine { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; overflow: hidden; perspective: 1600px;
+  background: var(--cine-marco); cursor: pointer; font-family: var(--marca-fuente, system-ui, sans-serif); -webkit-tap-highlight-color: transparent; }
+.cine.cine-fuera { animation: cine-fundido .45s ease forwards; }
+@keyframes cine-fundido { to { opacity: 0; visibility: hidden; } }
+
+.cine-puerta { position: relative; width: min(78vmin, 520px); aspect-ratio: 1; transform-style: preserve-3d;
+  animation: cine-aparece .5s cubic-bezier(.16,1,.3,1) both; transition: transform .9s cubic-bezier(.7,0,.2,1); }
+@keyframes cine-aparece { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: none; } }
+.cine-dentro .cine-puerta { transform: scale(3.4); }
+
+.cine-interior { position: absolute; left: 10%; top: 12%; width: 80%; height: 76%; background: #fff; display: grid; place-items: center; }
+.cine-interior img { width: 74%; height: auto; }
+
+.cine-hoja { position: absolute; top: 12%; height: 76%; width: 40%; transform-style: preserve-3d; backface-visibility: hidden;
+  transition: transform .8s cubic-bezier(.65,0,.15,1); }
+.cine-hoja svg { display: block; width: 100%; height: 100%; }
+.cine-hoja.izq { left: 10%; transform-origin: left center; }
+.cine-hoja.der { left: 50%; transform-origin: right center; }
+.cine-abierta .cine-hoja.izq { transform: rotateY(-118deg); }
+.cine-abierta .cine-hoja.der { transform: rotateY(118deg); }
+.cine-maneta { transform-box: fill-box; transition: transform .35s cubic-bezier(.5,0,.3,1.4); }
+.cine-maneta.izq { transform-origin: 100% 50%; }
+.cine-maneta.der { transform-origin: 0% 50%; }
+.cine-desbloqueada .cine-maneta.izq { transform: rotate(-90deg); }
+.cine-desbloqueada .cine-maneta.der { transform: rotate(90deg); }
+
+/* Bienvenida: tipografía, espacio y las empresas del grupo */
+.cine-bienvenida { position: absolute; inset: 0; background: #fff; color: #20211e; display: flex; flex-direction: column;
+  opacity: 0; transition: opacity .35s ease .45s; }
+.cine-dentro .cine-bienvenida { opacity: 1; }
+.cine-lienzo { flex: 1; display: flex; align-items: center; padding: clamp(28px, 6vh, 64px) clamp(28px, 10vw, 160px) 0; max-width: 1280px; width: 100%; margin: 0 auto; box-sizing: border-box; }
+.cine-texto { display: flex; flex-direction: column; gap: 12px; }
+.cine-b { opacity: 0; transform: translateY(14px); transition: opacity .5s ease, transform .6s cubic-bezier(.16,1,.3,1); }
+.cine-dentro .cine-b { opacity: 1; transform: none; }
+.cine-dentro .cine-b1 { transition-delay: .55s; } .cine-dentro .cine-b2 { transition-delay: .65s; }
+.cine-dentro .cine-b3 { transition-delay: .78s; } .cine-dentro .cine-b4 { transition-delay: .88s; } .cine-dentro .cine-b5 { transition-delay: 1.45s; }
+.cine-logo { width: clamp(180px, 24vw, 260px); height: auto; margin-bottom: clamp(18px, 4vh, 40px); }
+.cine-hola { margin: 0; font-size: clamp(16px, 2.2vw, 21px); color: #62665c; }
+.cine-nombre { margin: 0; font-family: "Saira Stencil One", var(--marca-fuente, sans-serif); font-weight: 400; font-size: clamp(56px, 11vw, 132px); line-height: .95; letter-spacing: .01em; overflow-wrap: anywhere; }
+.cine-raya { width: 56px; height: 5px; border-radius: 3px; margin: 12px 0 6px; background: var(--cine-color); }
+.cine-puesto { margin: 0; font-size: clamp(16px, 2vw, 20px); font-weight: 600; }
+.cine-fecha { margin: 0; font-size: clamp(14px, 1.7vw, 16px); color: #62665c; font-variant-numeric: tabular-nums; }
+.cine-fecha b { color: #20211e; font-weight: 600; }
+
+/* Pie. Los PNG no tienen el mismo margen: en stinsa.png la «S» ocupa todo el alto; en transargi.png la «T» ocupa 76 de
+   96 px (el resto es la «g»). Para que las letras midan igual, Transargi va 96/76 más alto y los dos se alinean arriba. */
+.cine-pie { --alto: clamp(20px, 2.6vw, 26px); display: flex; align-items: flex-start; justify-content: center; flex-wrap: wrap;
+  gap: clamp(14px, 3vw, 34px); padding: clamp(18px, 4vh, 34px) 24px clamp(16px, 3vh, 26px); }
+.cine-pie small { font-size: 11px; letter-spacing: .2em; color: #62665c; font-weight: 600; line-height: var(--alto); }
+.cine-logos { display: flex; align-items: flex-start; gap: clamp(18px, 3vw, 32px); }
+.cine-logos img { display: block; width: auto; }
+.cine-logos .stinsa { height: var(--alto); }
+.cine-logos .transargi { height: calc(var(--alto) * 96 / 76); }
+.cine-franja { display: flex; height: 8px; }
+.cine-franja span { flex: 1; transform: scaleX(0); transform-origin: left; transition: transform .55s cubic-bezier(.16,1,.3,1); }
+.cine-dentro .cine-franja span { transform: none; }
+.cine-dentro .cine-franja span:nth-child(1) { transition-delay: 1.25s; }
+.cine-dentro .cine-franja span:nth-child(2) { transition-delay: 1.38s; }
+.cine-dentro .cine-franja span:nth-child(3) { transition-delay: 1.51s; }
+
+.cine-saltar { position: absolute; left: 0; right: 0; bottom: 18px; text-align: center; color: rgba(255,255,255,.45); font-size: 13px; pointer-events: none; }
+.cine-dentro .cine-saltar { color: #8a8d82; }
+
+@media (max-width: 720px) { .cine-lienzo { padding-top: 22px; } .cine-logo { margin-bottom: 12px; } }
+
+/* Quien pide menos movimiento en su móvil: sin puerta, un fundido con el saludo */
+.cine-reducido .cine-puerta { display: none; }
+.cine-reducido *, .cine-reducido { animation-duration: 0s !important; transition-duration: .3s !important; transition-delay: 0s !important; }
+.cine-reducido.cine-fuera { animation-duration: .4s !important; }

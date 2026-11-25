@@ -5,6 +5,7 @@ import "../../public/deca/marca.css";
 import "./globals.css";
 import "../../public/deca/cabecera.css";   // cabecera y menú: la misma hoja que usa la PWA de DECA
 import "./shell.css";
+import "../../public/deca/cinematica.css";   // cinemática de entrada (la misma que DECA)
 
 export const metadata: Metadata = {
   title: "Grupo Trimodos",

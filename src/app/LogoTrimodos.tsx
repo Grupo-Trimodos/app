@@ -1,6 +1,7 @@
+"use client";
 // Logo "puerta de contenedor" personalizable por usuario.
 // Uso: <LogoTrimodos color={perfil.colorLogo} size={40} />
-import { useEffect, useId } from "react";
+import { useEffect, useId, useState } from "react";
 
 export const COLORES_CORPORATIVOS = {
   trimodos: "#FDDA00",
@@ -40,29 +41,9 @@ export function paleta(color: string) {
   };
 }
 
-// --- geometría del símbolo Trimodos (marca de agua) ---
-const R = Math.hypot(50, 64);
-const ay = (u: number) => Math.sqrt(R * R - (u - 50) ** 2);
-
-function Simbolo({ x, y, s, c }: { x: number; y: number; s: number; c: string }) {
-  const f = (u: number, v: number) => [x + (s * u) / 100, y + (s * v) / 100];
-  const L = (p: number[], q: number[], k: string) => (
-    <line key={k} x1={p[0]} y1={p[1]} x2={q[0]} y2={q[1]} stroke={c} strokeWidth={2.6} strokeLinecap="round" />
-  );
-  const p = f(0, 64), q = f(100, 64), r = (R * s) / 100;
-  return (
-    <g>
-      <rect x={x} y={y} width={s} height={s} fill="none" stroke={c} strokeWidth={2.6} />
-      {L(f(0, 29), f(100, 29), "h")}
-      {L(f(50, 0), f(50, 100), "v")}
-      {L(f(0, 100), f(14, ay(14)), "cl")}
-      {L(f(100, 100), f(86, ay(86)), "cr")}
-      <path d={`M${p[0]} ${p[1]} A${r} ${r} 0 0 0 ${q[0]} ${q[1]}`} fill="none" stroke={c} strokeWidth={2.6} />
-      {L(f(50, 0), f(0, 64), "ll")}
-      {L(f(50, 0), f(100, 64), "lr")}
-    </g>
-  );
-}
+// Símbolo original de Grupo Trimodos, recortado de trimodos.png y pasado a blanco para usarlo de máscara: la marca de
+// agua toma el color que toque (negro o blanco) sin redibujar el símbolo.
+export const SIMBOLO_MASCARA = "/deca/img/trimodos-simbolo-mascara.png";
 
 const ESTRIAS = [13, 17, 21, 25, 29, 33, 37, 41, 45, 53.6, 57.6, 61.6, 65.6, 69.6, 73.6, 77.6, 81.6, 85.6];
 const BARRAS = [20, 40, 60, 80];
@@ -76,6 +57,9 @@ export function LogoTrimodos({ color = COLORES_CORPORATIVOS.trimodos, size = 40 
         <filter id={`b${id}`} x="-10%" y="-10%" width="120%" height="120%">
           <feGaussianBlur stdDeviation="0.7" />
         </filter>
+        <mask id={`m${id}`} maskUnits="userSpaceOnUse" x="25" y="24" width="50" height="50">
+          <image href={SIMBOLO_MASCARA} x="25" y="24" width="50" height="50" />
+        </mask>
         <clipPath id={`c${id}`}>
           <rect width="100" height="100" rx="24" />
         </clipPath>
@@ -88,7 +72,7 @@ export function LogoTrimodos({ color = COLORES_CORPORATIVOS.trimodos, size = 40 
           <rect key={x} x={x} y="14" width="2" height="72" fill={c.estria} opacity="0.35" />
         ))}
         <g filter={`url(#b${id})`} opacity={c.opacidadMarca}>
-          <Simbolo x={25} y={24} s={50} c={c.marca} />
+          <rect x="25" y="24" width="50" height="50" fill={c.marca} mask={`url(#m${id})`} />
         </g>
         {BARRAS.map((x) => (
           <g key={x} fill={c.marco}>
@@ -126,26 +110,33 @@ export function useFaviconLogo(color?: string) {
   }, [color]);
 }
 
-// Selector para la pantalla de perfil
-export function SelectorColorLogo({ valor, onCambio }: { valor: string; onCambio: (c: string) => void }) {
+// Selector para «Mi perfil»: va dentro de un <form> con la acción del servidor; envía el campo «color».
+export function SelectorColorLogo({ inicial }: { inicial: string }) {
+  const [valor, setValor] = useState(inicial);
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-      {Object.entries(COLORES_CORPORATIVOS).map(([nombre, hex]) => (
-        <button
-          key={nombre}
-          type="button"
-          onClick={() => onCambio(hex)}
-          aria-label={`Logo color ${nombre}`}
-          aria-pressed={valor === hex}
-          style={{ padding: 4, borderRadius: 14, border: valor === hex ? "2px solid #121312" : "2px solid transparent", background: "none" }}
-        >
-          <LogoTrimodos color={hex} size={44} />
-        </button>
-      ))}
-      <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        Otro color
-        <input type="color" value={valor} onChange={(e) => onCambio(e.target.value)} />
-      </label>
+    <div className="selector-logo">
+      <LogoTrimodos color={valor} size={72} />
+      <div className="selector-logo-opciones" role="group" aria-label="Colores del grupo">
+        {Object.entries(COLORES_CORPORATIVOS).map(([nombre, hex]) => (
+          <button key={nombre} type="button" onClick={() => setValor(hex)} aria-pressed={valor.toLowerCase() === hex.toLowerCase()}
+            aria-label={`Color ${NOMBRES[nombre]}`} title={NOMBRES[nombre]}>
+            <LogoTrimodos color={hex} size={44} />
+          </button>
+        ))}
+        <label className="selector-logo-otro">
+          <span>Otro color</span>
+          <input type="color" value={valor} onChange={(e) => setValor(e.target.value)} />
+        </label>
+      </div>
+      <input type="hidden" name="color" value={valor} />
     </div>
   );
+}
+
+const NOMBRES: Record<string, string> = { trimodos: "Trimodos", stinsa: "Stinsa", transargi: "Transargi", noche: "Noche" };
+
+/** Pone el favicon de la pestaña con el color de la persona. Se pinta desde la cabecera. */
+export function FaviconLogo({ color }: { color: string }) {
+  useFaviconLogo(color);
+  return null;
 }

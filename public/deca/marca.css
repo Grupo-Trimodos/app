@@ -15,10 +15,10 @@
   --marca-stinsa: #009f92;
   --marca-transargi: #f17e49;
 }
-.marcas-grupo { display: flex; align-items: center; gap: 22px; }
-.marcas-grupo img { display: block; width: 94px; height: 30px; object-fit: contain; }
-.marcas-grupo img + img { padding-left: 20px; border-left: 1px solid #d4d7ca; width: 114px; }
-.shell-sidebar-footer .marcas-grupo { gap: 12px; padding: 14px 12px; background: white; border-radius: 8px; }
-.shell-sidebar-footer .marcas-grupo img { width: 66px; height: 25px; }
-.shell-sidebar-footer .marcas-grupo img + img { width: 78px; padding-left: 12px; }
+/* Los PNG no tienen el mismo margen: en stinsa.png la «S» ocupa todo el alto; en transargi.png la «T» ocupa 76 de 96 px
+   (el resto es la «g»). Para que las letras midan igual, Transargi va 96/76 más alto y los dos se alinean arriba. */
+.marcas-grupo { --alto-marca: 22px; display: flex; align-items: flex-start; gap: 20px; }
+.marcas-grupo img { display: block; width: auto; height: var(--alto-marca); }
+.marcas-grupo img + img { height: calc(var(--alto-marca) * 96 / 76); }
+.shell-sidebar-footer .marcas-grupo { --alto-marca: 15px; gap: 12px; padding: 14px 12px; background: white; border-radius: 8px; }
 .shell-sidebar-footer .marcas-grupo { margin-top: 8px; }

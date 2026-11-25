@@ -34,6 +34,8 @@
 <link rel="stylesheet" href="/deca/marca.css">
 <link rel="stylesheet" href="/deca/cabecera.css">
 <link rel="stylesheet" href="/deca/styles.css">
+<link rel="stylesheet" href="/deca/cinematica.css">
+<script>try{if(!sessionStorage.getItem("trimodos-cinematica-vista")&&localStorage.getItem("trimodos-bienvenida"))document.documentElement.classList.add("cine-pendiente")}catch(e){}</script>
 </head>
 <body>
 <!-- La cabecera y el menú de la app (los pinta /deca/cabecera.js, igual que en el resto de pantallas). -->
@@ -125,6 +127,7 @@
 <div id="busy" class="overlay" hidden>
   <div class="dialog" role="status" aria-live="polite"><h2 id="busy-msg">Un momento…</h2><div class="progress" aria-hidden="true"><span></span></div></div>
 </div>
+<script src="/deca/cinematica.js"></script>
 <script src="/deca/cabecera.js"></script>
 <script src="/deca/app.js"></script>
 </body>

@@ -749,3 +749,11 @@ table.registro-tabla { display: table; width: 100%; min-width: 520px; border-col
   .inicio-modulo, .modulo { transition: none; }
   .campo-estado i { animation: none !important; }
 }
+
+/* Logo personalizable (color elegido en «Mi perfil») */
+.selector-logo { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; margin: 12px 0 16px; }
+.selector-logo-opciones { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.selector-logo-opciones button { padding: 3px; border: 2px solid transparent; border-radius: 14px; background: none; cursor: pointer; min-width: 44px; min-height: 44px; }
+.selector-logo-opciones button[aria-pressed="true"] { border-color: #20211e; }
+.selector-logo-otro { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #575c51; }
+.selector-logo-otro input { width: 48px; height: 44px; border: 1px solid #e0e1d8; border-radius: 10px; padding: 2px; background: white; cursor: pointer; }
