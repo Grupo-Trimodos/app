@@ -4,7 +4,7 @@ MAPAS dice, para cada tipo de dato, qué aplicación de Odoo lo guarda, hacia d�
 verdad»). Antes de enviar nada se mira qué aplicaciones están instaladas en Odoo: lo que no tiene su aplicación se
 salta y se explica en la pantalla «Sincronización» (nunca se fuerza ni se inventa un sitio).
 
-  · Odoo manda → la app lo lee:   fichas de empleado (enlace automático), flota de camiones.
+  · Odoo manda → la app lo lee:   fichas de empleado (enlace automático), organigrama (perfiles y alcance), flota.
   · La app manda → Odoo lo recibe: fichajes (asistencias) y ausencias aprobadas.
 
 Se lanza sola (cron de Vercel, con CRON_SECRET) o con el botón de la pantalla (permiso «admin.sincronizacion»).
@@ -39,6 +39,9 @@ MAPAS = [
     {"id": "empleados", "nombre": "Fichas de empleado", "app_odoo": "hr", "nombre_app": "Empleados",
      "modelo": "hr.employee", "sentido": "odoo_a_app",
      "que_hace": "Enlaza a cada persona con su ficha de empleado de Odoo por su correo de trabajo o su código de credencial."},
+    {"id": "organigrama", "nombre": "Organigrama", "app_odoo": "hr", "nombre_app": "Empleados",
+     "modelo": "hr.employee", "sentido": "odoo_a_app",
+     "que_hace": "Guarda una foto del organigrama (puesto, departamento y gerente de cada ficha) y, si está encendido, pone a cada persona los perfiles de su puesto y el de responsable a quien tiene gente a su cargo."},
     {"id": "fichajes", "nombre": "Fichajes", "app_odoo": "hr_attendance", "nombre_app": "Asistencias",
      "modelo": "hr.attendance", "sentido": "app_a_odoo",
      "que_hace": "Cada entrada, pausa y salida se anota como asistencia de su empleado."},
@@ -78,6 +81,25 @@ def _paso_empleados(limite: float) -> dict:
     r = {"enlazados": enlazados, "sin_ficha": sin}
     if not rrhh.odoo_real():
         r["aviso"] = "Odoo en modo simulado: no se guarda ningún enlace."
+    return r
+
+
+def _paso_organigrama(limite: float) -> dict:
+    """Odoo → app, solo lectura: foto del organigrama y perfiles según puesto y gerente (docs/acceso-y-perfiles.md)."""
+    if not rrhh.odoo_real():
+        return {"aviso": "Odoo en modo simulado: no se guarda el organigrama."}
+    from .config import get_settings
+    fichas = _odoo().organigrama(get_settings().organigrama_company_ids)
+    if not fichas:
+        return {"aviso": "Odoo no ha devuelto ninguna ficha: no se cambia nada."}
+    foto = supa.llamar(supa.SERVICIO, "guardar_foto_organigrama", {"origen": "sincronización", "fichas": fichas},
+                       "No se ha podido guardar el organigrama.") or {}
+    r = {"fichas": int(foto.get("fichas") or 0), "foto_nueva": 1 if foto.get("nueva") else 0}
+    aplicado = supa.llamar(supa.SERVICIO, "aplicar_perfiles_organigrama", {}, "No se han podido aplicar los perfiles.") or {}
+    if aplicado.get("estado") == "aplicado":
+        r.update(perfiles_puestos=int(aplicado.get("puestos") or 0), perfiles_quitados=int(aplicado.get("quitados") or 0))
+    elif aplicado.get("estado") == "apagado":
+        r["aviso"] = "Perfiles por organigrama apagados: solo se guarda la foto (enciéndelo en Administración → Organigrama)."
     return r
 
 
@@ -147,7 +169,7 @@ def _paso_vehiculos(limite: float) -> dict:
     return r
 
 
-PASOS = {"empleados": _paso_empleados, "fichajes": _paso_fichajes, "ausencias": _paso_ausencias, "vehiculos": _paso_vehiculos}
+PASOS = {"empleados": _paso_empleados, "organigrama": _paso_organigrama, "fichajes": _paso_fichajes, "ausencias": _paso_ausencias, "vehiculos": _paso_vehiculos}
 
 
 def procesar(origen: str) -> dict:

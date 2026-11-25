@@ -133,6 +133,65 @@ comparan teléfonos de empresa. Migración `20261117110000_vinculo_odoo_telefono
 - **Pruebas:** `scripts.prueba_vinculo_db` (PostgreSQL local en Docker; `--como-produccion` salta las migraciones que
   aún no están en producción) y `tests/test_vinculos_odoo.py`.
 
+## Perfiles por organigrama de Odoo (25-11-2026)
+
+Autorizado por Félix el 25-11-2026: «que cada uno vea lo que realmente le importa», según el organigrama de Odoo.
+Migración `20261125120000_perfiles_por_organigrama.sql`; pantalla **Administración → Perfiles por organigrama**
+(`/admin/organigrama`, permiso `admin.usuarios`); paso «Organigrama» de la sincronización (`servicios/sincronizacion.py`).
+
+**Decisiones de Félix**
+- **La ficha de empleado manda.** El *puesto* de la ficha da el perfil; el *gerente* dice quién está a cargo de quién.
+- **Responsable no se asigna a mano:** lo es quien es gerente de alguien en Odoo, y vale sobre todo lo que cuelga de él,
+  **en cascada**. Las vacaciones las aprueba el directo y, si no está, cualquiera de encima.
+- **Varias fichas por persona** (una por empresa: Carmelo en STINSA y TRANSARGI, Loles en Trimodos y TRANSARGI). El árbol
+  se monta por personas: lo que cuelga de cualquiera de sus fichas es suyo. Así Pilar llega a TRANSARGI a través de la
+  ficha de Carmelo en STINSA, sin cambiar nada en Odoo. Quien tiene varias fichas no ficha; si algún día lo hace, sus
+  fichajes van a su ficha principal (`usuarios.odoo_employee_id`, sin cambios).
+- **Administración** (Carla y Loles) ve y aprueba las vacaciones de **toda su empresa** aunque nadie dependa de ella. La
+  empresa 9 (TRIMODOS, S.L.) es «paraguas»: quien es de ella cuenta como de todas (`organigrama_ajustes.empresas_grupo`).
+  No es simétrico: la administración de TRANSARGI no llega al personal de Trimodos.
+- **Encargados de almacén**, pantalla de móvil. **Mecánicos**, perfil Operario.
+
+**Puesto → perfil** (tabla `puestos_perfil`, editable en la pantalla; se empareja por el nombre del puesto porque en
+Odoo hay puestos repetidos por empresa con ids distintos):
+
+| Puesto de Odoo | Perfil | Pantalla |
+|---|---|---|
+| Conductor | Chófer | móvil |
+| Operario de Almacén, Mecánico | Operario | móvil |
+| Técnico, Coordinador, Encargado, Jefe y Responsable de Tráfico; Comercial | Tráfico | oficina |
+| Administrativo | Administración (alcance: su empresa) | oficina |
+| Técnico de Prevención y Calidad | Prevención y Calidad (todos los centros) | oficina |
+| Encargado de Almacén | Almacén | móvil |
+| Dirección | Dirección | cuadro de mando |
+| Administrador TIC | Administrador | dirección |
+
+Los perfiles nuevos empiezan con los permisos del piloto (los de Oficina u Operario; Tráfico, además DECA). Lo demás se
+da desde Administración → Perfiles, como siempre.
+
+**Cómo funciona**
+- **Foto diaria, solo lectura.** La sincronización lee `hr.employee` (nombre, empresa, departamento completo, puesto,
+  gerente y ubicación; nada personal ni de nómina) de las empresas de `ODOO_EMPRESAS_ORGANIGRAMA` (vacío = las de
+  `ODOO_COMPANY_IDS`; para todo el grupo, `1,7,9`) y la guarda con `public.guardar_foto_organigrama` (solo clave de
+  servidor, todo o nada). Las fotos solo se añaden (base 3b); si no ha cambiado nada, no se guarda otra igual.
+- **Interruptor** (`organigrama_ajustes.aplicar`, apagado al migrar). Apagado: se guardan las fotos y se ve la vista
+  previa, pero nadie gana ni pierde perfiles. Encendido: `public.aplicar_perfiles_organigrama()` pone los perfiles que
+  tocan (origen `odoo`, sin centro) y quita los de origen `odoo` que ya no tocan. **Lo puesto a mano (`manual`) nunca se
+  toca.** Apagarlo deja de aplicar, no quita nada.
+- **Alcance** (`perfiles.alcance_odoo`): además del centro y de «todos los centros», los permisos de un perfil sobre
+  otras personas valen sobre quien cuelga de mí (`organigrama`, Responsable) o sobre mi empresa (`empresa`,
+  Administración). Lo calculan `privado.a_cargo_de`, `privado.misma_empresa`, y con ellas `privado.puedo_sobre`,
+  `privado.personas_a_cargo` y `public.quien_me_aprueba` (todas las políticas que ya las usan heredan el cambio).
+- **Mi equipo** tiene la pestaña «Mi gente» (`public.mi_gente_odoo()`): quien cuelga de mí en Odoo, con su puesto y si es
+  directo. Las pestañas por centro siguen igual.
+- **Vista previa y «ver la app como…»** en la pantalla: para cada ficha, los perfiles que le daría Odoo frente a los que
+  tiene, su pantalla, su menú y la gente a su cargo.
+
+**Pendiente (siguiente paso):** el «para quién» de lo que se publica (fechas del calendario, automatizaciones, avisos)
+por rama del organigrama, empresa o puesto, en vez de solo por centro o equipo.
+
+**Pruebas:** `scripts.prueba_organigrama_db` (PostgreSQL local) y `tests/test_organigrama.py`.
+
 ## Perfiles y pantallas
 
 - **Cuatro perfiles básicos, que no se borran ni cambian de nombre** (`perfiles.base`, lo impide la base de datos): **Administrador**, **Oficina**, **Chófer** y **Operario**. Cada persona tiene **un puesto en su centro**. Encima se le suman **complementos**: **Responsable**, que aprueba lo de su centro, y **Seguridad**, que vale en todos los centros. Los permisos de cada perfil se siguen editando con casillas.

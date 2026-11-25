@@ -23,6 +23,7 @@ const NOMBRES_DATO: Record<string, string> = {
   enlazados: "enlazados", sin_ficha: "sin ficha", personas: "personas", enviados: "enviados", errores: "con error",
   sin_empleado: "sin ficha de empleado", enviado: "enviadas", simulado: "simuladas", error: "con error", en_odoo: "en Odoo",
   nuevos: "nuevos", matricula_cambiada: "con matrícula cambiada", no_aplica: "no aplica",
+  fichas: "fichas", foto_nueva: "foto nueva", perfiles_puestos: "perfiles puestos", perfiles_quitados: "perfiles quitados",
 };
 
 function resumen(p: Paso) {

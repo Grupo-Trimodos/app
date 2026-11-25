@@ -113,6 +113,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Bu
     <main className="contenido">
       <div className="admin-cabecera">
         <h1>Administración</h1>
+        {gestionaUsuarios && <Link className="btn pequeno" href="/admin/organigrama">Perfiles por organigrama</Link>}
         {puede("admin.sincronizacion") && <Link className="btn pequeno" href="/admin/sincronizacion">Sincronización con Odoo</Link>}
       </div>
       {pestanas.length > 0 && <nav className="pestanas" aria-label="Secciones de administración">

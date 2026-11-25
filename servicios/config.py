@@ -35,6 +35,7 @@ class Settings:
     qr_allowed_hosts: list[str]
     editable_stages: list[str]   # etapas de la tarea en las que se puede modificar
     weight_warning_kg: float     # a partir de este peso (kg) la app pide confirmar (posible exceso de la MMA)
+    organigrama_company_ids: list[int] = ()  # empresas cuyo organigrama se lee para perfiles y alcance (solo lectura)
 
 
 def get_settings() -> Settings:
@@ -58,4 +59,7 @@ def get_settings() -> Settings:
         qr_allowed_hosts=[h.strip().lower() for h in os.environ.get("QR_ALLOWED_HOSTS", "").split(",") if h.strip()],
         weight_warning_kg=float((os.environ.get("PESO_AVISO_KG", "") or "27000").replace(",", ".")),
         editable_stages=[x.strip() for x in os.environ.get("EDITABLE_STAGES", "nuevo,en desarrollo").split(",") if x.strip()],
+        # Vacío: las de ODOO_COMPANY_IDS. Para el organigrama del grupo: 1,7,9 (STINSA, TRANSARGI y TRIMODOS).
+        organigrama_company_ids=[int(x) for x in (os.environ.get("ODOO_EMPRESAS_ORGANIGRAMA", "") or
+                                                  os.environ.get("ODOO_COMPANY_IDS", "1,7")).split(",") if x.strip()],
     )

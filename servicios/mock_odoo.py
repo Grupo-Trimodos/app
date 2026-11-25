@@ -343,6 +343,20 @@ class MockOdoo:
     def etiquetas_analiticas(self, empresas=None):
         return [dict(e) for e in ETIQUETAS_ANALITICAS]
 
+    def organigrama(self, empresas):
+        """Organigrama de ejemplo: una directora, un jefe de tráfico, un encargado con dos conductores y una administrativa."""
+        filas = [
+            (1, "Directora (ejemplo)", 1, 10, "Grupo", 14, "Dirección", None),
+            (2, "Jefe de tráfico (ejemplo)", 1, 11, "Grupo / Tráfico", 21, "Jefe de Tráfico", 1),
+            (3, "Encargado (ejemplo)", 1, 12, "Grupo / Tráfico / Residuos", 22, "Encargado de Tráfico", 2),
+            (4, "Conductor A (ejemplo)", 1, 13, "Grupo / Tráfico / Residuos / Conductores", 10, "Conductor", 3),
+            (5, "Conductor B (ejemplo)", 1, 13, "Grupo / Tráfico / Residuos / Conductores", 10, "Conductor", 3),
+            (6, "Administrativa (ejemplo)", 7, 20, "Grupo / Administración", 25, "Administrativo", 1),
+        ]
+        return [{"empleado_id": i, "nombre": n, "empresa_id": e, "empresa": f"Empresa {e}", "departamento_id": d,
+                 "departamento": dn, "puesto_id": p, "puesto": pn, "gerente_id": g, "ubicacion_id": None, "ubicacion": None}
+                for i, n, e, d, dn, p, pn, g in filas if e in empresas]
+
     def modulos_instalados(self, nombres):
         return {n for n in nombres if n in self.instalados}
 
